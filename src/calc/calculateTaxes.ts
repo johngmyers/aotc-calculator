@@ -10,9 +10,16 @@ export type TaxBrackets = TaxBracket[]
 export interface TaxRules {
     brackets: TaxBrackets
     standardDeduction?: number
+    dependentStandardDeduction?: {
+        base: number
+        earnedAddOn: number
+    }
 }
 
 export interface GrossIncome {
+    claimedAsDependent?: boolean
+    earnedIncome?: number // Only used if claimedAsDependent is true
+    taxableScholarships?: number // Only used if claimedAsDependent is true
     agi: number
     mustItemize?: boolean
 }
@@ -27,6 +34,15 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome) : TaxC
     if (grossIncome.mustItemize) {
         standardDeduction = 0;
     }
+    if (grossIncome.claimedAsDependent && rules.dependentStandardDeduction) {
+        const dependentStandardDeduction = Math.max(
+            rules.dependentStandardDeduction.base,
+            rules.dependentStandardDeduction.earnedAddOn + (grossIncome.earnedIncome ?? 0) + (grossIncome.taxableScholarships ?? 0)
+        );
+
+        standardDeduction = Math.min(standardDeduction, dependentStandardDeduction);
+    }
+
     const taxableIncome = Math.max(0, grossIncome.agi - standardDeduction);
 
     let tax = 0;
