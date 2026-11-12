@@ -9,6 +9,7 @@ export type TaxBrackets = TaxBracket[]
 
 export interface TaxRules {
     brackets: TaxBrackets
+    capitalGainsBrackets?: TaxBrackets
     standardDeduction?: number
     dependentStandardDeduction?: {
         base: number
@@ -21,6 +22,7 @@ export interface GrossIncome {
     earnedIncome?: number // Only used if claimedAsDependent is true
     taxableScholarships?: number // Only used if claimedAsDependent is true
     agi: number
+    ltcg?: number
     mustItemize?: boolean
 }
 
@@ -47,10 +49,20 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome) : TaxC
 
     let tax = 0;
     let previousBracket = 0;
+
+    const ltcg = rules.capitalGainsBrackets ? Math.min(grossIncome.ltcg ?? 0, taxableIncome): 0;
+    const ordinaryIncome = taxableIncome - ltcg
+
     for (const bracket of rules.brackets) {
+        const incrementalIncome = Math.max(0, Math.min(ordinaryIncome, bracket.until) - previousBracket);
+        tax += incrementalIncome * bracket.rate;
+        previousBracket = Math.min(bracket.until, ordinaryIncome);
+    }
+
+    for (const bracket of rules.capitalGainsBrackets ?? []) {
         const incrementalIncome = Math.max(0, Math.min(taxableIncome, bracket.until) - previousBracket);
         tax += incrementalIncome * bracket.rate;
-        previousBracket = bracket.until;
+        previousBracket = Math.max(previousBracket, Math.min(bracket.until, taxableIncome));
     }
 
     tax = round(tax);

@@ -234,3 +234,150 @@ describe('calculateTaxes - Dependent Standard Deduction Rules', () => {
         expect(result.tax).toBe(500);
     });
 });
+
+describe('calculateTaxes - Capital Gains Brackets & Income Stacking', () => {
+    const stackedRules: TaxRules = {
+        standardDeduction: 10000,
+        brackets: [
+            {until: 10000, rate: 0.10},
+            {until: 30000, rate: 0.20},
+            {until: Infinity, rate: 0.30},
+        ],
+        capitalGainsBrackets: [
+            {until: 15000, rate: 0.05}, // Non-zero lowest cap gains tier to ensure visibility
+            {until: 30000, rate: 0.15},
+            {until: Infinity, rate: 0.25},
+        ],
+    };
+
+    it('applies the non-zero lowest capital gains rate correctly up to the threshold after standard deduction', () => {
+        // AGI = $20,000, entirely composed of LTCG ($20,000); ordinary income = $0.
+        // Standard Deduction = $10,000 absorbs the $0 ordinary income.
+        // Taxable income = $10,000 (all LTCG), falling entirely within the first bracket ($15k width) @ 5%:
+        // - $10,000 * 0.05 = $500
+        const income: GrossIncome = {
+            agi: 20000,
+            ltcg: 20000,
+        };
+
+        const result = calculateTaxes(stackedRules, income);
+        expect(result.taxableIncome).toBe(10000);
+        expect(result.tax).toBe(500);
+    });
+
+    it('slices capital gains accurately across two non-zero tiers after standard deduction', () => {
+        // AGI = $30,000, entirely composed of LTCG ($30,000); ordinary income = $0.
+        // Standard Deduction = $10,000 absorbs the $0 ordinary income.
+        // Taxable income = $20,000 (all LTCG):
+        // - First $15,000 @ 5% = $750
+        // - Remaining $5,000 @ 15% = $750
+        // Total Tax = $750 + $750 = $1,500
+        const income: GrossIncome = {
+            agi: 30000,
+            ltcg: 30000,
+        };
+
+        const result = calculateTaxes(stackedRules, income);
+        expect(result.taxableIncome).toBe(20000);
+        expect(result.tax).toBe(1500);
+    });
+
+    it('correctly stacks ordinary income and capital gains, accounting for ordinary income consuming lower cap gains brackets', () => {
+        // Total AGI = $70,000, where:
+        // - LTCG = $30,000
+        // - Ordinary income before deduction = AGI - ltcg = $70,000 - $30,000 = $40,000
+        // Standard Deduction = $10,000.
+        // Taxable ordinary income = $40,000 - $10,000 = $30,000 (consumes 2 full ordinary brackets):
+        //   - Full Bracket 1 ($0 to $10k -> $10,000) @ 10% = $1,000
+        //   - Full Bracket 2 ($10k to $30k -> $20,000) @ 20% = $4,000
+        //   Ordinary Tax = $5,000
+        //
+        // Stacking Mechanics for LTCG:
+        // Taxable ordinary income ($30,000) occupies the bottom $30,000 of the capital gains brackets,
+        // completely consuming CG Bracket 1 ($15k) and CG Bracket 2 ($15k).
+        // Therefore, the $30,000 of LTCG (spanning from cumulative $30,000 to $60,000) falls entirely into CG Bracket 3:
+        //   - $30,000 @ 25% = $7,500
+        //   Cap Gains Tax = $7,500
+        // Total Tax expected = $5,000 + $7,500 = $12,500
+        const income: GrossIncome = {
+            agi: 70000,
+            ltcg: 30000,
+        };
+
+        const result = calculateTaxes(stackedRules, income);
+
+        expect(result.taxableIncome).toBe(60000); // 70000 - 10000 SD
+        expect(result.tax).toBe(12500);
+    });
+
+    it('effectively ignores ltcg if capitalGainsBrackets are missing from rules', () => {
+        const rulesWithoutCapGains: TaxRules = {
+            standardDeduction: 0,
+            brackets: [
+                {until: 20000, rate: 0.10},
+                {until: Infinity, rate: 0.20},
+            ],
+        };
+
+        // AGI = $20,000 with $10,000 ltcg. Without capitalGainsBrackets,
+        // the entire $20,000 AGI is taxed as ordinary income:
+        // - $20,000 @ 10% = $2,000
+        const income: GrossIncome = {
+            agi: 20000,
+            ltcg: 10000,
+        };
+
+        const result = calculateTaxes(rulesWithoutCapGains, income);
+        expect(result.tax).toBe(2000);
+    });
+
+    it('handles ordinary income less than standard deduction with remaining LTCG taxable', () => {
+        // Standard Deduction = $10,000.
+        // AGI = $22,000, where LTCG = $15,000.
+        // Ordinary income before deduction = AGI - ltcg = $22,000 - $15,000 = $7,000.
+        // Since ordinary income ($7,000) is less than the standard deduction ($10,000),
+        // ordinary taxable income is $0.
+        // Total taxable income = $22,000 AGI - $10,000 SD = $12,000.
+        // Taxable ordinary income is $0, so LTCG starts at $0 in the cap gains brackets:
+        // - $12,000 @ 5% = $600
+        const income: GrossIncome = {
+            agi: 22000,
+            ltcg: 15000,
+        };
+
+        const result = calculateTaxes(stackedRules, income);
+        expect(result.taxableIncome).toBe(12000);
+        expect(result.tax).toBe(600);
+    });
+
+    it('stacks ordinary income above standard deduction alongside LTCG with correct bracket offset', () => {
+        // Standard Deduction = $10,000.
+        // AGI = $45,000, where LTCG = $15,000.
+        // Ordinary income before deduction = AGI - LTCG = $45,000 - $15,000 = $30,000.
+        // Taxable ordinary income = $30,000 - $10,000 (SD) = $20,000.
+        // Total Taxable Income = $35,000.
+        //
+        // Stacking mechanics:
+        // 1. Taxable ordinary income ($20,000) consumes ordinary brackets:
+        //    - Full Bracket 1: $10,000 @ 10% = $1,000
+        //    - Half of Bracket 2: $10,000 @ 20% = $2,000
+        //    Ordinary Tax = $3,000
+        // 2. Taxable ordinary income ($20,000) consumes the bottom $20,000 of capital gains brackets:
+        //    - CG Bracket 1 ($15k width) is fully consumed.
+        //    - CG Bracket 2 ($15k width) has $5,000 consumed ($20k - $15k), leaving $10,000 capacity.
+        // 3. LTCG ($15,000) stacks on top starting at the $20,000 mark:
+        //    - Remaining CG Bracket 2: $10,000 @ 15% = $1,500
+        //    - Spillover into CG Bracket 3: $5,000 @ 25% = $1,250
+        //    Cap Gains Tax = $1,500 + $1,250 = $2,750
+        //
+        // Total Tax expected = $3,000 + $2,750 = $5,750
+        const income: GrossIncome = {
+            agi: 45000,
+            ltcg: 15000,
+        };
+
+        const result = calculateTaxes(stackedRules, income);
+        expect(result.taxableIncome).toBe(35000);
+        expect(result.tax).toBe(5750);
+    });
+});
