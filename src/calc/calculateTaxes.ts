@@ -23,6 +23,7 @@ export interface GrossIncome {
     taxableScholarships?: number // Only used if claimedAsDependent is true
     agi: number
     ltcg?: number
+    itemizedDeductions?: number
     mustItemize?: boolean
 }
 
@@ -45,7 +46,8 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome) : TaxC
         standardDeduction = Math.min(standardDeduction, dependentStandardDeduction);
     }
 
-    const taxableIncome = Math.max(0, grossIncome.agi - standardDeduction);
+    const deduction = Math.max(standardDeduction, grossIncome.itemizedDeductions ?? 0);
+    const taxableIncome = Math.max(0, grossIncome.agi - deduction);
 
     let tax = 0;
     let previousBracket = 0;

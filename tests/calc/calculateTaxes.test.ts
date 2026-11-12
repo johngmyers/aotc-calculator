@@ -381,3 +381,182 @@ describe('calculateTaxes - Capital Gains Brackets & Income Stacking', () => {
         expect(result.tax).toBe(5750);
     });
 });
+
+describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
+    const baseRules: TaxRules = {
+        standardDeduction: 10000,
+        brackets: [
+            {until: 10000, rate: 0.10},
+            {until: 30000, rate: 0.20},
+            {until: Infinity, rate: 0.30},
+        ],
+    };
+
+    it('applies standard deduction when itemized deductions are lower', () => {
+        // AGI = $25,000, itemizedDeductions = $7,000 (lower than standardDeduction of $10,000).
+        // Effective deduction = max($10,000 standard, $7,000 itemized) = $10,000.
+        // Taxable income = $25,000 - $10,000 = $15,000.
+        // - First $10,000 @ 10% = $1,000
+        // - Remaining $5,000 @ 20% = $1,000
+        // Total Tax = $2,000
+        const income: GrossIncome = {
+            agi: 25000,
+            itemizedDeductions: 7000,
+        };
+
+        const result = calculateTaxes(baseRules, income);
+        expect(result.taxableIncome).toBe(15000);
+        expect(result.tax).toBe(2000);
+    });
+
+    it('applies itemized deductions when they exceed the standard deduction', () => {
+        // AGI = $30,000, itemizedDeductions = $14,000 (higher than standardDeduction of $10,000).
+        // Effective deduction = max($10,000 standard, $14,000 itemized) = $14,000.
+        // Taxable income = $30,000 - $14,000 = $16,000.
+        // - First $10,000 @ 10% = $1,000
+        // - Remaining $6,000 @ 20% = $1,200
+        // Total Tax = $2,200
+        const income: GrossIncome = {
+            agi: 30000,
+            itemizedDeductions: 14000,
+        };
+
+        const result = calculateTaxes(baseRules, income);
+        expect(result.taxableIncome).toBe(16000);
+        expect(result.tax).toBe(2200);
+    });
+
+    it('compares itemized deductions against the calculated dependent standard deduction when claimed as a dependent', () => {
+        // Dependent rules: basic cap = $10,000, base = $1,350, earnedAddOn = $450.
+        // Earned income = $5,000 -> calculated dependent SD = max(1350, 5000 + 450) = $5,450.
+        // Itemized deductions = $7,000.
+        // Since itemized ($7,000) > calculated dependent SD ($5,450), itemized deductions should win.
+        // AGI = $20,000 - $7,000 = $13,000 taxable income.
+        const dependentRules: TaxRules = {
+            standardDeduction: 10000,
+            dependentStandardDeduction: {
+                base: 1350,
+                earnedAddOn: 450,
+            },
+            brackets: [
+                {until: 10000, rate: 0.10},
+                {until: Infinity, rate: 0.20},
+            ],
+        };
+
+        const income: GrossIncome = {
+            agi: 20000,
+            claimedAsDependent: true,
+            earnedIncome: 5000,
+            itemizedDeductions: 7000,
+        };
+
+        const result = calculateTaxes(dependentRules, income);
+        expect(result.taxableIncome).toBe(13000); // $20,000 - $7,000 itemized
+    });
+
+    it('applies itemized deductions when they exceed the dependent standard deduction even if below non-dependent standard deduction', () => {
+        // Dependent rules: basic cap = $10,000, base = $1,350, earnedAddOn = $450.
+        // Earned income = $2,000 -> calculated dependent SD = max(1350, 2000 + 450) = $2,450.
+        // Itemized deductions = $5,000 (below non-dependent SD of $10,000, but higher than dependent SD of $2,450).
+        // Effective deduction = max($2,450 dependent SD, $5,000 itemized) = $5,000 itemized.
+        // AGI = $15,000 - $5,000 = $10,000 taxable income.
+        const dependentRules: TaxRules = {
+            standardDeduction: 10000,
+            dependentStandardDeduction: {
+                base: 1350,
+                earnedAddOn: 450,
+            },
+            brackets: [
+                {until: 10000, rate: 0.10},
+                {until: Infinity, rate: 0.20},
+            ],
+        };
+
+        const income: GrossIncome = {
+            agi: 15000,
+            claimedAsDependent: true,
+            earnedIncome: 2000,
+            itemizedDeductions: 5000,
+        };
+
+        const result = calculateTaxes(dependentRules, income);
+        expect(result.taxableIncome).toBe(10000);
+        expect(result.tax).toBe(1000);
+    });
+
+    it('applies dependent standard deduction when itemized deductions are lower than dependent standard deduction', () => {
+        // Earned income = $6,000 -> calculated dependent SD = max(1350, 6000 + 450) = $6,450.
+        // Itemized deductions = $4,000 (lower than dependent SD of $6,450).
+        // Effective deduction = max($6,450 dependent SD, $4,000 itemized) = $6,450 dependent SD.
+        // AGI = $15,000 - $6,450 = $8,550 taxable income.
+        const dependentRules: TaxRules = {
+            standardDeduction: 10000,
+            dependentStandardDeduction: {
+                base: 1350,
+                earnedAddOn: 450,
+            },
+            brackets: [
+                {until: 10000, rate: 0.10},
+                {until: Infinity, rate: 0.20},
+            ],
+        };
+
+        const income: GrossIncome = {
+            agi: 15000,
+            claimedAsDependent: true,
+            earnedIncome: 6000,
+            itemizedDeductions: 4000,
+        };
+
+        const result = calculateTaxes(dependentRules, income);
+        expect(result.taxableIncome).toBe(8550);
+        expect(result.tax).toBe(855);
+    });
+
+    it('correctly integrates itemized deductions with capital gains bracket stacking', () => {
+        // Standard Deduction = $10,000, Itemized Deductions = $15,000 in GrossIncome (Wins).
+        // AGI = $50,000, where LTCG = $20,000.
+        // Ordinary income before deduction = AGI - LTCG = $50,000 - $20,000 = $30,000.
+        // Taxable ordinary income = $30,000 - $15,000 (Itemized) = $15,000.
+        // Total taxable income = $50,000 - $15,000 = $35,000.
+        //
+        // Stacking mechanics:
+        // 1. Taxable ordinary income ($15,000) consumes ordinary brackets:
+        //    - Full Bracket 1 ($10k width) @ 10% = $1,000
+        //    - Remaining Bracket 2 ($5k) @ 20% = $1,000
+        //    Ordinary Tax = $2,000
+        // 2. Taxable ordinary income ($15,000) consumes the bottom $15,000 of capital gains brackets:
+        //    - CG Bracket 1 ($15k width) is fully consumed.
+        // 3. LTCG ($20,000) stacks on top starting at the $15,000 mark:
+        //    - Fills CG Bracket 2 ($15k width) @ 15% = $2,250
+        //    - Spillover into CG Bracket 3 ($5k) @ 25% = $1,250
+        //    Cap Gains Tax = $2,250 + $1,250 = $3,500
+        //
+        // Total Tax = $2,000 + $3,500 = $5,500
+        const stackingRulesWithCapGains: TaxRules = {
+            standardDeduction: 10000,
+            brackets: [
+                {until: 10000, rate: 0.10},
+                {until: 30000, rate: 0.20},
+                {until: Infinity, rate: 0.30},
+            ],
+            capitalGainsBrackets: [
+                {until: 15000, rate: 0.05},
+                {until: 30000, rate: 0.15},
+                {until: Infinity, rate: 0.25},
+            ],
+        };
+
+        const income: GrossIncome = {
+            agi: 50000,
+            ltcg: 20000,
+            itemizedDeductions: 15000,
+        };
+
+        const result = calculateTaxes(stackingRulesWithCapGains, income);
+
+        expect(result.taxableIncome).toBe(35000);
+        expect(result.tax).toBe(5500);
+    });
+});
