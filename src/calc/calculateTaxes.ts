@@ -9,10 +9,12 @@ export type TaxBrackets = TaxBracket[]
 
 export interface TaxRules {
     brackets: TaxBrackets
+    standardDeduction?: number
 }
 
 export interface GrossIncome {
     agi: number
+    mustItemize?: boolean
 }
 
 export type TaxCalculationResult = {
@@ -21,7 +23,11 @@ export type TaxCalculationResult = {
 }
 
 export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome) : TaxCalculationResult {
-    const taxableIncome = Math.max(0, grossIncome.agi);
+    let standardDeduction = rules.standardDeduction ?? 0;
+    if (grossIncome.mustItemize) {
+        standardDeduction = 0;
+    }
+    const taxableIncome = Math.max(0, grossIncome.agi - standardDeduction);
 
     let tax = 0;
     let previousBracket = 0;
