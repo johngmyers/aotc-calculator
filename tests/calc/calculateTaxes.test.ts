@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 // @ts-ignore
-import {calculateTaxes, TaxRules} from '../../src/calc/calculateTaxes';
+import {calculateTaxes, GrossIncome, TaxRules} from '../../src/calc/calculateTaxes';
 
 describe('calculateTaxes - brackets', () => {
     const cumulativeRules: TaxRules = {
@@ -135,5 +135,102 @@ describe('calculateTaxes - standardDeduction', () => {
         });
         expect(mustItemizeResult.taxableIncome).toBe(21100);
         expect(mustItemizeResult.tax).toBe(2332);
+    });
+});
+
+describe('calculateTaxes - Dependent Standard Deduction Rules', () => {
+    // Dependent student rules: basic cap = $16,100, base = $1,350, earnedAddOn = $450
+    const dependentRules: TaxRules = {
+        standardDeduction: 16100, // Acts as the maximum cap for a dependent
+        dependentStandardDeduction: {
+            base: 1350,
+            earnedAddOn: 450,
+        },
+        brackets: [
+            {until: 11925, rate: 0.10},
+            {until: 48475, rate: 0.12},
+            {until: Infinity, rate: 0.22},
+        ]
+    };
+
+    it('applies the dependent baseline floor when earned income is zero or very low', () => {
+        const inputs: GrossIncome = {
+            agi: 5000,
+            claimedAsDependent: true,
+            earnedIncome: 200,
+        };
+        // Dependent SD = max(1350, 200 + 450) = max(1350, 650) = $1,350 baseline floor
+        // Taxable income = $5,000 - $1,350 = $3,650
+        const result = calculateTaxes(dependentRules, inputs);
+        expect(result.taxableIncome).toBe(3650);
+    });
+
+    it('scales the dependent standard deduction up with earned income plus add-on', () => {
+        const inputs: GrossIncome = {
+            agi: 8000,
+            claimedAsDependent: true,
+            earnedIncome: 4000,
+        };
+        // Dependent SD = max(1350, 4000 + 450) = max(1350, 4450) = $4,450
+        // Taxable income = $8,000 - $4,450 = $3,550
+        const result = calculateTaxes(dependentRules, inputs);
+        expect(result.taxableIncome).toBe(3550);
+    });
+
+    it('caps the dependent standard deduction at the basic standard deduction limit', () => {
+        const inputs: GrossIncome = {
+            agi: 25000,
+            claimedAsDependent: true,
+            earnedIncome: 18000, // High summer job earnings
+        };
+        // Uncapped calculation would be 18000 + 450 = 18450, but capped at non-dependent SD ($16,100)
+        // Taxable income = $25,000 - $16,100 = $8,900
+        const result = calculateTaxes(dependentRules, inputs);
+        expect(result.taxableIncome).toBe(8900);
+    });
+
+    it('defaults earnedIncome to 0 when omitted for a dependent, applying the base minimum floor', () => {
+        const inputs: GrossIncome = {
+            agi: 5000,
+            claimedAsDependent: true,
+            // earnedIncome is intentionally omitted / undefined
+        };
+
+        // Dependent SD = max(1350, (undefined ?? 0) + 450) = max(1350, 450) = $1,350 baseline floor
+        // Taxable income = $5,000 - $1,350 = $3,650
+        const result = calculateTaxes(dependentRules, inputs);
+        expect(result.taxableIncome).toBe(3650);
+    });
+
+    it('handles a dependent with taxable scholarships as earned income for standard deduction', () => {
+        // Under IRS rules, taxable scholarships/fellowships are treated as earned income specifically
+        // for calculating the dependent standard deduction add-on ($450).
+        const inputs: GrossIncome = {
+            agi: 5500,
+            claimedAsDependent: true,
+            earnedIncome: 1000,
+            taxableScholarships: 2000,
+        };
+
+        // Total earned equivalent for dependent SD = $1,000 earned + $2,000 scholarship = $3,000
+        // Dependent SD = max(1350, 3000 + 450) = max(1350, 3450) = $3,450
+        // Taxable income = $5,500 AGI - $3,450 SD = $2,050
+        const result = calculateTaxes(dependentRules, inputs);
+        expect(result.taxableIncome).toBe(2050);
+    });
+
+    it('disallows the standard deduction for a dependent when mustItemize is true', () => {
+        const inputs: GrossIncome = {
+            agi: 5000,
+            claimedAsDependent: true,
+            earnedIncome: 2000,
+            mustItemize: true, // Forces dependent standard deduction to $0
+        };
+        // Since mustItemize is true, dependent SD rules are bypassed and standard deduction = $0.
+        // Taxable income = $5,000 - $0 = $5,000.
+        // - $5,000 @ 10% = $500.00 tax.
+        const result = calculateTaxes(dependentRules, inputs);
+        expect(result.taxableIncome).toBe(5000);
+        expect(result.tax).toBe(500);
     });
 });
