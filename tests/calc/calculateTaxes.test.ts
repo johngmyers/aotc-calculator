@@ -1014,3 +1014,277 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
         expect(result.outOfScopeForVITA).toBe(true);
     });
 });
+
+describe('Personal Exemptions and Credits', () => {
+    const brackets = [
+        {rate: 0.05, until: 20000},
+        {rate: 0.10, until: Infinity},
+    ];
+
+    const deductionRules: TaxRules = {
+        brackets: brackets,
+        standardDeduction: 1000,
+        exemption: {
+            taxpayerAmount: 3007,
+            dependentAmount: 1009,
+            seniorOrBlindAmount: 503,
+        },
+    };
+
+    const creditRules: TaxRules = {
+        brackets: brackets,
+        standardDeduction: 5000,
+        exemption: {
+            exemptionIsCredit: true,
+            taxpayerAmount: 307,
+            dependentAmount: 103,
+            seniorOrBlindAmount: 53,
+        },
+    };
+
+    const phaseoutOnlyRules: TaxRules = {
+        brackets: brackets,
+        standardDeduction: 2000,
+        exemption: {
+            taxpayerAmount: 3007,
+            dependentAmount: 1009,
+            seniorOrBlindAmount: 503,
+            phaseout: {
+                threshold: 40000,
+                increment: 2500,
+                rate: 0.02,
+            },
+        },
+    };
+
+    const federalPhaseoutRules: TaxRules = {
+            brackets: brackets,
+            standardDeduction: 2000,
+            exemption: {
+                taxpayerAmount: 3007,
+                dependentAmount: 1009,
+                seniorOrBlindAmount: 503,
+                phaseout: {
+                    threshold: 40000,
+                    increment: 2500,
+                    rate: 0.02,
+                    usesFederalAgi: true,
+                },
+            },
+        };
+
+    it('has deduction-style exemption reduce taxable income', () => {
+        const gross: GrossIncome = {
+            agi: 25000,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(deductionRules, gross);
+        expect(result.taxableIncome).toBe(16960);
+        expect(result.tax).toBe(848);
+    });
+
+    it('wipes out personal exemptions for claimed dependents', () => {
+        const gross: GrossIncome = {
+            agi: 15000,
+            claimedAsDependent: true,
+            earnedIncome: 5000,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(deductionRules, gross);
+        expect(result.taxableIncome).toBe(14000);
+        expect(result.tax).toBe(700);
+    });
+
+    it('applies credit-style exemptions against tax liability directly', () => {
+        const gross: GrossIncome = {
+            agi: 15000,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(creditRules, gross);
+        expect(result.taxableIncome).toBe(10000);
+        expect(result.tax).toBe(0);
+    });
+
+    it('caps credit exemptions at zero to enforce nonrefundability', () => {
+        const lowTaxCreditRules: TaxRules = {
+            brackets,
+            standardDeduction: 1000,
+            exemption: {
+                exemptionIsCredit: true,
+                taxpayerAmount: 500,
+                dependentAmount: 200,
+                seniorOrBlindAmount: 200,
+            },
+        };
+
+        const gross: GrossIncome = {
+            agi: 2000, // Taxable income is 1000, tentative tax at 5% is 50
+            dependentCount: 1,
+            seniorOrBlindCount: 1,
+        };
+
+        const result = calculateTaxes(lowTaxCreditRules, gross);
+        expect(result.taxableIncome).toBe(1000);
+        expect(result.tax).toBe(0);
+    });
+
+    it('reduces allowance when AGI exceeds phaseout threshold', () => {
+        const gross: GrossIncome = {
+            agi: 46000,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(phaseoutOnlyRules, gross);
+        expect(result.taxableIncome).toBe(37382);
+    });
+
+    it('ensures exemption phaseout at exact threshold does not trigger reduction', () => {
+        const gross: GrossIncome = {
+            agi: 40000,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(phaseoutOnlyRules, gross);
+        expect(result.taxableIncome).toBe(30960);
+    });
+
+    it('triggers first increment of exemption phaseout one dollar over threshold', () => {
+        const gross: GrossIncome = {
+            agi: 40001,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(phaseoutOnlyRules, gross);
+        expect(result.taxableIncome).toBe(31102);
+    });
+
+    it('doesn\'t phaseout second increment at boundary', () => {
+        const gross: GrossIncome = {
+            agi: 45000,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(phaseoutOnlyRules, gross);
+        expect(result.taxableIncome).toBe(36242);
+    });
+
+    it('triggers first increment of exemption phaseout one dollar over threshold', () => {
+        const gross: GrossIncome = {
+            agi: 45001,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(phaseoutOnlyRules, gross);
+        expect(result.taxableIncome).toBe(36383);
+    });
+
+    it('caps phaseout reduction at zero when AGI is extremely high', () => {
+        const gross: GrossIncome = {
+            agi: 500000,
+            dependentCount: 3,
+            seniorOrBlindCount: 2,
+        };
+
+        const result = calculateTaxes(phaseoutOnlyRules, gross);
+        expect(result.taxableIncome).toBe(498000);
+    });
+
+    it('calculates exemption phaseout using federalAgi when provided', () => {
+            const result = calculateTaxes(federalPhaseoutRules, {
+                agi: 35000,
+                federalAgi: 42500,
+            });
+
+        expect(result.taxableIncome).toBe(30053);
+    });
+
+        it('returns MISSING_FEDERAL_AGI error when federalAgi is omitted for phaseout rules', () => {
+            const result = calculateTaxes(federalPhaseoutRules, {
+                agi: 42500,
+            });
+
+            expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
+        });
+
+        it('bypasses federalAgi error when taxpayer is claimed as a dependent', () => {
+            const result = calculateTaxes(federalPhaseoutRules, {
+                agi: 42500,
+                claimedAsDependent: true,
+            });
+
+        expect(result.taxableIncome).toBe(40500);
+    });
+
+    it('rounds phased-out deduction-style exemptions to the nearest dollar', () => {
+        const rules: TaxRules = {
+            brackets: [
+                {rate: 0.05, until: 20000},
+                {rate: 0.10, until: Infinity},
+            ],
+            standardDeduction: 0,
+            exemption: {
+                taxpayerAmount: 25,
+                dependentAmount: 0,
+                seniorOrBlindAmount: 0,
+                phaseout: {
+                    threshold: 40000,
+                    increment: 2500,
+                    rate: 0.02,
+                },
+            },
+        };
+
+        // AGI = $47,500 -> ($47,500 - $40,000) / $2,500 = 3 increments.
+        // Per-increment reduction = $25 * 0.02 = $0.50.
+        // Total reduction = 3 * $0.50 = $1.50 -> rounded to $2 (vs. $3 if each $0.50 increment rounded to $1).
+        // Exemption = $25 - $2 = $23 -> taxable income = $47,500 - $23 = $47,477.
+        const result = calculateTaxes(rules, {
+            agi: 47500,
+        });
+
+        expect(result.taxableIncome).toBe(47477);
+    });
+
+    it('rounds phased-out credit-style exemptions to the nearest dollar', () => {
+            const rules: TaxRules = {
+                brackets: [
+                    {rate: 0.05, until: 20000},
+                    {rate: 0.10, until: Infinity},
+                ],
+                standardDeduction: 0,
+                exemption: {
+                    exemptionIsCredit: true,
+                    taxpayerAmount: 25,
+                    dependentAmount: 0,
+                    seniorOrBlindAmount: 0,
+                    phaseout: {
+                        threshold: 40000,
+                        increment: 2500,
+                        rate: 0.02,
+                    },
+                },
+            };
+
+            // AGI = $47,500 -> ($47,500 - $40,000) / $2,500 = 3 increments.
+            // Total reduction = $25 * (3 * 0.02) = $1.50 -> rounded to $2 (vs. $1 if floored).
+            // Net credit = $25 - $2 = $23.
+            // Bracket tax on $47,500: ($20,000 * 0.05) + ($27,500 * 0.10) = $1,000 + $2,750 = $3,750.
+            // Tax = $3,750 - $23 = $3,727.
+            const result = calculateTaxes(rules, {
+                agi: 47500,
+            });
+
+            expect(result.tax).toBe(3727);
+        });
+});
