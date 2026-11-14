@@ -32,6 +32,8 @@ export interface TaxRules {
         base: number
         earnedAddOn: number
     }
+    itemizedDeductionsUseFederalAgi?: boolean
+    medicalDeductionThresholdRate?: number
     exemption?: ExemptionRules
     kiddieTax?: {
         unearnedIncomeThreshold: number
@@ -54,8 +56,9 @@ export interface GrossIncome {
     dependentCount?: number
     seniorOrBlindCount?: number
 
-    itemizedDeductions?: number
     mustItemize?: boolean
+    itemizedMedicalDeductions?: number
+    itemizedOtherDeductions?: number
 
     // Below are only used if claimedAsDependent is true
     earnedIncome?: number
@@ -83,8 +86,27 @@ export type TaxCalculationResult = {
 
 export type TaxCalculationOutcome = TaxError | TaxCalculationResult
 
-export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome) : TaxCalculationOutcome {
+// Calculate the phaseout of an itemized deduction
+function phaseoutDeduction(rules: TaxRules, grossIncome: GrossIncome, thresholdRate?: number): number | TaxError {
+    if (!thresholdRate) {
+        return 0;
+    }
+
+    if (rules.itemizedDeductionsUseFederalAgi && grossIncome.federalAgi === undefined) {
+        return {
+            errorCode: 'MISSING_FEDERAL_AGI',
+            errorMessage: 'Federal AGI needed for itemized deductions phaseout'
+        };
+    }
+
+    const applicableAgi = rules.itemizedDeductionsUseFederalAgi ? grossIncome.federalAgi! : grossIncome.agi;
+    return round(applicableAgi * thresholdRate);
+}
+
+export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCalculationOutcome {
     let outOfScopeForVITA = false
+
+    // Standard deduction
     let standardDeduction = rules.standardDeduction ?? 0;
     let itemizing = false
     if (grossIncome.mustItemize) {
@@ -102,7 +124,20 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome) : TaxC
         standardDeduction = Math.min(standardDeduction, dependentStandardDeduction);
     }
 
-    const deduction = Math.max(standardDeduction, grossIncome.itemizedDeductions ?? 0);
+    // Itemized deductions
+    let itemizedDeduction = 0;
+
+    if (grossIncome.itemizedMedicalDeductions) {
+        const phaseout = phaseoutDeduction(rules, grossIncome, rules.medicalDeductionThresholdRate);
+        if (typeof (phaseout) !== 'number') {
+            return phaseout;
+        }
+        itemizedDeduction += Math.max(0, grossIncome.itemizedMedicalDeductions - phaseout);
+    }
+
+    itemizedDeduction += grossIncome.itemizedOtherDeductions ?? 0;
+
+    const deduction = Math.max(standardDeduction, itemizedDeduction);
     if (deduction > standardDeduction) {
         itemizing = true
     }
@@ -133,7 +168,7 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome) : TaxC
 
         return Math.max(0, grossAmount - Math.max(0, reduction));
     })();
-    if (typeof(exemptionAmount) !== 'number') {
+    if (typeof (exemptionAmount) !== 'number') {
         return exemptionAmount
     }
 

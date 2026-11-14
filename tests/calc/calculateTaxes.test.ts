@@ -417,7 +417,114 @@ describe('calculateTaxes - Capital Gains Brackets & Income Stacking', () => {
     });
 });
 
-describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
+describe('calculateTaxes - itemizedMedicalDeductions', () => {
+    it('calculates deductible medical expenses above AGI floor without standard deduction interference', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            medicalDeductionThresholdRate: 0.50, // 50% AGI floor for clean math
+        };
+
+        // AGI = $19,999. Floor = 50% * $19,999 = $9,999.50 (rounded to nearest dollar = $10,000).
+        // Medical expenses = $16,000 -> deductible = $16,000 - $10,000 = $6,000.
+        // Taxable income = $19,999 - $6,000 = $13,999.
+        const result = calculateTaxes(rules, {
+            agi: 19999,
+            itemizedMedicalDeductions: 16000,
+        });
+        expect(result.taxableIncome).toBe(13999);
+    });
+
+    it('applies standard deduction when total itemized deductions fall below standard deduction', () => {
+        const rules: TaxRules = {
+            standardDeduction: 5000,
+            brackets: [{until: Infinity, rate: 0.10}],
+            medicalDeductionThresholdRate: 0.50,
+        };
+
+        // AGI = $20,000. Floor = $10,000.
+        // Medical expenses = $12,000 -> deductible = $2,000.
+        // Total itemized ($2,000) loses to standard deduction ($5,000).
+        // Taxable income = $20,000 - $5,000 = $15,000.
+        const result = calculateTaxes(rules, {
+            agi: 20000,
+            itemizedMedicalDeductions: 12000,
+        });
+        expect(result.taxableIncome).toBe(15000);
+    });
+
+    it('calculates medical expense deduction floor using federalAgi when itemizedDeductionsUseFederalAgi is enabled', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            medicalDeductionThresholdRate: 0.50,
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        // AGI = $30,000, Federal AGI = $20,000. Floor = 50% * $20,000 = $10,000.
+        // Medical expenses = $16,000 -> deductible = $16,000 - $10,000 = $6,000.
+        // Taxable income = $30,000 - $6,000 = $24,000.
+        const result = calculateTaxes(rules, {
+            agi: 30000,
+            federalAgi: 20000,
+            itemizedMedicalDeductions: 16000,
+        });
+        expect(result.taxableIncome).toBe(24000);
+    });
+
+    it('returns MISSING_FEDERAL_AGI error when itemizedDeductionsUseFederalAgi is enabled and federalAgi is missing', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            medicalDeductionThresholdRate: 0.50,
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        const result = calculateTaxes(rules, {
+            agi: 30000,
+            itemizedMedicalDeductions: 16000,
+        });
+
+        expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
+    });
+
+    it('succeeds when itemizedDeductionsUseFederalAgi is true, federalAgi is missing, but medicalDeductionThresholdRate is absent', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        const result = calculateTaxes(rules, {
+            agi: 30000,
+            itemizedMedicalDeductions: 16000,
+        });
+
+        expect('errorCode' in result).toBe(false);
+        expect(result.taxableIncome).toBe(14000); // 30000 AGI - 16000 itemized medical deductions
+    });
+
+    it('ignores deductible medical expenses when medicalDeductionThresholdRate is Infinity', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            medicalDeductionThresholdRate: Infinity,
+        };
+
+        // AGI = $20,000, medicalDeductionThresholdRate = Infinity -> floor is Infinity,
+        // so max(0, expenses - floor) = 0 and itemized medical adds $0 deduction.
+        // Taxable income = $20,000 - $0 = $20,000 -> tax = $2,000.
+        const result = calculateTaxes(rules, {
+            agi: 20000,
+            itemizedMedicalDeductions: 50000,
+        });
+
+        expect(result.taxableIncome).toBe(20000);
+        expect(result.tax).toBe(2000);
+    });
+});
+
+describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
     const baseRules: TaxRules = {
         standardDeduction: 10000,
         brackets: [
@@ -428,7 +535,7 @@ describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
     };
 
     it('applies standard deduction when itemized deductions are lower', () => {
-        // AGI = $25,000, itemizedDeductions = $7,000 (lower than standardDeduction of $10,000).
+        // AGI = $25,000, itemizedOtherDeductions = $7,000 (lower than standardDeduction of $10,000).
         // Effective deduction = max($10,000 standard, $7,000 itemized) = $10,000.
         // Taxable income = $25,000 - $10,000 = $15,000.
         // - First $10,000 @ 10% = $1,000
@@ -436,7 +543,7 @@ describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
         // Total Tax = $2,000
         const income: GrossIncome = {
             agi: 25000,
-            itemizedDeductions: 7000,
+            itemizedOtherDeductions: 7000,
         };
 
         const result = calculateTaxes(baseRules, income);
@@ -446,7 +553,7 @@ describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
     });
 
     it('applies itemized deductions when they exceed the standard deduction', () => {
-        // AGI = $30,000, itemizedDeductions = $14,000 (higher than standardDeduction of $10,000).
+        // AGI = $30,000, itemizedOtherDeductions = $14,000 (higher than standardDeduction of $10,000).
         // Effective deduction = max($10,000 standard, $14,000 itemized) = $14,000.
         // Taxable income = $30,000 - $14,000 = $16,000.
         // - First $10,000 @ 10% = $1,000
@@ -454,7 +561,7 @@ describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
         // Total Tax = $2,200
         const income: GrossIncome = {
             agi: 30000,
-            itemizedDeductions: 14000,
+            itemizedOtherDeductions: 14000,
         };
 
         const result = calculateTaxes(baseRules, income);
@@ -485,7 +592,7 @@ describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
             agi: 20000,
             claimedAsDependent: true,
             earnedIncome: 5000,
-            itemizedDeductions: 7000,
+            itemizedOtherDeductions: 7000,
         };
 
         const result = calculateTaxes(dependentRules, income);
@@ -515,7 +622,7 @@ describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
             agi: 15000,
             claimedAsDependent: true,
             earnedIncome: 2000,
-            itemizedDeductions: 5000,
+            itemizedOtherDeductions: 5000,
         };
 
         const result = calculateTaxes(dependentRules, income);
@@ -545,7 +652,7 @@ describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
             agi: 15000,
             claimedAsDependent: true,
             earnedIncome: 6000,
-            itemizedDeductions: 4000,
+            itemizedOtherDeductions: 4000,
         };
 
         const result = calculateTaxes(dependentRules, income);
@@ -591,7 +698,7 @@ describe('calculateTaxes - itemizedDeductions in GrossIncome', () => {
         const income: GrossIncome = {
             agi: 50000,
             ltcg: 20000,
-            itemizedDeductions: 15000,
+            itemizedOtherDeductions: 15000,
         };
 
         const result = calculateTaxes(stackingRulesWithCapGains, income);
@@ -684,7 +791,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 5000,
             claimedAsDependent: true,
             earnedIncome: 3000,
-            itemizedDeductions: 5000,
+            itemizedOtherDeductions: 5000,
             directlyConnectedItemizedDeductions: 0,
         };
 
@@ -881,7 +988,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
         //    - Bracket 2 ($24,000 to $91,500 -> $67,500 width) @ 12% = $8,100.00
         //    Total Baseline Parent Tax = $10,500.00. (Remaining capacity in 12% bracket is $4,500, up to the $96,000 threshold).
         //
-        // 2. Child Return & Line 2 Threshold (AGI $15,000 total: $3,000 earned + $12,000 unearned; itemizedDeductions = $5,000):
+        // 2. Child Return & Line 2 Threshold (AGI $15,000 total: $3,000 earned + $12,000 unearned; itemizedOtherDeductions = $5,000):
         //    - Itemized deductions ($5,000) exceed dependent SD ($3,600) -> Child Taxable Income = $15,000 - $5,000 = $10,000.
         //    - Line 2 Threshold = max(itemizedBase $1,350 + directlyConnected $2,000, unearnedIncomeThreshold $2,600) = $3,350.
         //    - Net Unearned Income subject to parent rate = $12,000 unearned - $3,350 threshold = $8,650.
@@ -897,7 +1004,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 15000,
             claimedAsDependent: true,
             earnedIncome: 3000,
-            itemizedDeductions: 5000,
+            itemizedOtherDeductions: 5000,
             directlyConnectedItemizedDeductions: 2000,
             parent: {
                 income: {
@@ -923,7 +1030,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 10000,
             claimedAsDependent: true,
             earnedIncome: 0,
-            itemizedDeductions: 10000,
+            itemizedOtherDeductions: 10000,
             parent: {
                 income: {
                     taxableIncome: 100000,
@@ -956,7 +1063,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 8000,
             claimedAsDependent: true,
             earnedIncome: 3000,
-            itemizedDeductions: 3650,
+            itemizedOtherDeductions: 3650,
             directlyConnectedItemizedDeductions: 3650,
             parent: {
                 income: {
@@ -1058,20 +1165,20 @@ describe('Personal Exemptions and Credits', () => {
     };
 
     const federalPhaseoutRules: TaxRules = {
-            brackets: brackets,
-            standardDeduction: 2000,
-            exemption: {
-                taxpayerAmount: 3007,
-                dependentAmount: 1009,
-                seniorOrBlindAmount: 503,
-                phaseout: {
-                    threshold: 40000,
-                    increment: 2500,
-                    rate: 0.02,
-                    usesFederalAgi: true,
-                },
+        brackets: brackets,
+        standardDeduction: 2000,
+        exemption: {
+            taxpayerAmount: 3007,
+            dependentAmount: 1009,
+            seniorOrBlindAmount: 503,
+            phaseout: {
+                threshold: 40000,
+                increment: 2500,
+                rate: 0.02,
+                usesFederalAgi: true,
             },
-        };
+        },
+    };
 
     it('has deduction-style exemption reduce taxable income', () => {
         const gross: GrossIncome = {
@@ -1201,27 +1308,27 @@ describe('Personal Exemptions and Credits', () => {
     });
 
     it('calculates exemption phaseout using federalAgi when provided', () => {
-            const result = calculateTaxes(federalPhaseoutRules, {
-                agi: 35000,
-                federalAgi: 42500,
-            });
+        const result = calculateTaxes(federalPhaseoutRules, {
+            agi: 35000,
+            federalAgi: 42500,
+        });
 
         expect(result.taxableIncome).toBe(30053);
     });
 
-        it('returns MISSING_FEDERAL_AGI error when federalAgi is omitted for phaseout rules', () => {
-            const result = calculateTaxes(federalPhaseoutRules, {
-                agi: 42500,
-            });
-
-            expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
+    it('returns MISSING_FEDERAL_AGI error when federalAgi is omitted for phaseout rules', () => {
+        const result = calculateTaxes(federalPhaseoutRules, {
+            agi: 42500,
         });
 
-        it('bypasses federalAgi error when taxpayer is claimed as a dependent', () => {
-            const result = calculateTaxes(federalPhaseoutRules, {
-                agi: 42500,
-                claimedAsDependent: true,
-            });
+        expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
+    });
+
+    it('bypasses federalAgi error when taxpayer is claimed as a dependent', () => {
+        const result = calculateTaxes(federalPhaseoutRules, {
+            agi: 42500,
+            claimedAsDependent: true,
+        });
 
         expect(result.taxableIncome).toBe(40500);
     });
@@ -1257,34 +1364,34 @@ describe('Personal Exemptions and Credits', () => {
     });
 
     it('rounds phased-out credit-style exemptions to the nearest dollar', () => {
-            const rules: TaxRules = {
-                brackets: [
-                    {rate: 0.05, until: 20000},
-                    {rate: 0.10, until: Infinity},
-                ],
-                standardDeduction: 0,
-                exemption: {
-                    exemptionIsCredit: true,
-                    taxpayerAmount: 25,
-                    dependentAmount: 0,
-                    seniorOrBlindAmount: 0,
-                    phaseout: {
-                        threshold: 40000,
-                        increment: 2500,
-                        rate: 0.02,
-                    },
+        const rules: TaxRules = {
+            brackets: [
+                {rate: 0.05, until: 20000},
+                {rate: 0.10, until: Infinity},
+            ],
+            standardDeduction: 0,
+            exemption: {
+                exemptionIsCredit: true,
+                taxpayerAmount: 25,
+                dependentAmount: 0,
+                seniorOrBlindAmount: 0,
+                phaseout: {
+                    threshold: 40000,
+                    increment: 2500,
+                    rate: 0.02,
                 },
-            };
+            },
+        };
 
-            // AGI = $47,500 -> ($47,500 - $40,000) / $2,500 = 3 increments.
-            // Total reduction = $25 * (3 * 0.02) = $1.50 -> rounded to $2 (vs. $1 if floored).
-            // Net credit = $25 - $2 = $23.
-            // Bracket tax on $47,500: ($20,000 * 0.05) + ($27,500 * 0.10) = $1,000 + $2,750 = $3,750.
-            // Tax = $3,750 - $23 = $3,727.
-            const result = calculateTaxes(rules, {
-                agi: 47500,
-            });
-
-            expect(result.tax).toBe(3727);
+        // AGI = $47,500 -> ($47,500 - $40,000) / $2,500 = 3 increments.
+        // Total reduction = $25 * (3 * 0.02) = $1.50 -> rounded to $2 (vs. $1 if floored).
+        // Net credit = $25 - $2 = $23.
+        // Bracket tax on $47,500: ($20,000 * 0.05) + ($27,500 * 0.10) = $1,000 + $2,750 = $3,750.
+        // Tax = $3,750 - $23 = $3,727.
+        const result = calculateTaxes(rules, {
+            agi: 47500,
         });
+
+        expect(result.tax).toBe(3727);
+    });
 });
