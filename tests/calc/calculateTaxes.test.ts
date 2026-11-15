@@ -524,6 +524,109 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
     });
 });
 
+describe('calculateTaxes - miscellaneousDeductions', () => {
+    it('calculates deductible miscellaneous expenses above AGI floor without standard deduction interference', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            miscellaneousDeductionThresholdRate: 0.50,
+        };
+
+        // AGI = $19,999 -> floor = $19,999 * 0.50 = $9,999.50 -> rounded to $10,000.
+        // Miscellaneous expenses = $16,000 -> deductible = $16,000 - $10,000 = $6,000.
+        // Taxable income = $19,999 - $6,000 = $13,999.
+        const result = calculateTaxes(rules, {
+            agi: 19999,
+            itemizedMiscellaneousDeductions: 16000,
+        });
+        expect(result.taxableIncome).toBe(13999);
+    });
+
+    it('applies standard deduction when total itemized deductions fall below standard deduction', () => {
+        const rules: TaxRules = {
+            standardDeduction: 5000,
+            brackets: [{until: Infinity, rate: 0.10}],
+            miscellaneousDeductionThresholdRate: 0.50,
+        };
+
+        // AGI = $20,000 -> floor = $10,000.
+        // Miscellaneous expenses = $12,000 -> deductible = $2,000 (< $5,000 standard deduction).
+        // Taxable income = $20,000 - $5,000 = $15,000.
+        const result = calculateTaxes(rules, {
+            agi: 20000,
+            itemizedMiscellaneousDeductions: 12000,
+        });
+        expect(result.taxableIncome).toBe(15000);
+    });
+
+    it('calculates miscellaneous expense deduction floor using federalAgi when itemizedDeductionsUseFederalAgi is enabled', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            miscellaneousDeductionThresholdRate: 0.50,
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        // AGI = $30,000, Federal AGI = $20,000 -> floor = 50% * $20,000 = $10,000.
+        // Miscellaneous expenses = $16,000 -> deductible = $16,000 - $10,000 = $6,000.
+        // Taxable income = $30,000 - $6,000 = $24,000.
+        const result = calculateTaxes(rules, {
+            agi: 30000,
+            federalAgi: 20000,
+            itemizedMiscellaneousDeductions: 16000,
+        });
+        expect(result.taxableIncome).toBe(24000);
+    });
+
+    it('returns MISSING_FEDERAL_AGI error when itemizedDeductionsUseFederalAgi is enabled and federalAgi is missing', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            miscellaneousDeductionThresholdRate: 0.50,
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        const result = calculateTaxes(rules, {
+            agi: 30000,
+            itemizedMiscellaneousDeductions: 16000,
+        });
+
+        expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
+    });
+
+    it('succeeds when itemizedDeductionsUseFederalAgi is true, federalAgi is missing, but miscellaneousDeductionThresholdRate is absent', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        const result = calculateTaxes(rules, {
+            agi: 30000,
+            itemizedMiscellaneousDeductions: 16000,
+        });
+
+        expect('errorCode' in result).toBe(false);
+        expect(result.taxableIncome).toBe(14000);
+    });
+
+    it('ignores deductible miscellaneous expenses when miscellaneousDeductionThresholdRate is Infinity', () => {
+        const rules: TaxRules = {
+            standardDeduction: 0,
+            brackets: [{until: Infinity, rate: 0.10}],
+            miscellaneousDeductionThresholdRate: Infinity,
+        };
+
+        const result = calculateTaxes(rules, {
+            agi: 20000,
+            itemizedMiscellaneousDeductions: 50000,
+        });
+
+        expect(result.taxableIncome).toBe(20000);
+        expect(result.tax).toBe(2000);
+    });
+});
+
 describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
     const baseRules: TaxRules = {
         standardDeduction: 10000,

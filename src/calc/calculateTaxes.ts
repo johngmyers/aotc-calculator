@@ -34,6 +34,7 @@ export interface TaxRules {
     }
     itemizedDeductionsUseFederalAgi?: boolean
     medicalDeductionThresholdRate?: number
+    miscellaneousDeductionThresholdRate?: number
     exemption?: ExemptionRules
     kiddieTax?: {
         unearnedIncomeThreshold: number
@@ -58,6 +59,7 @@ export interface GrossIncome {
 
     mustItemize?: boolean
     itemizedMedicalDeductions?: number
+    itemizedMiscellaneousDeductions?: number
     itemizedOtherDeductions?: number
 
     // Below are only used if claimedAsDependent is true
@@ -133,6 +135,14 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
             return phaseout;
         }
         itemizedDeduction += Math.max(0, grossIncome.itemizedMedicalDeductions - phaseout);
+    }
+
+    if (grossIncome.itemizedMiscellaneousDeductions) {
+        const phaseout = phaseoutDeduction(rules, grossIncome, rules.miscellaneousDeductionThresholdRate);
+        if (typeof (phaseout) !== 'number') {
+            return phaseout;
+        }
+        itemizedDeduction += Math.max(0, grossIncome.itemizedMiscellaneousDeductions - phaseout);
     }
 
     itemizedDeduction += grossIncome.itemizedOtherDeductions ?? 0;
