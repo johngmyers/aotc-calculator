@@ -1,0 +1,25 @@
+Out of scope for the calculator, if on the student return:
+
+* Alternative Minimum Tax (AMT) owed
+* Charitable contribution carryforwards
+* Net Operating Loss (NOL) carryforwards
+* Form 2555 (Foreign Earned Income)
+* Income from sources from American territories excluded by bona-fide resident
+* Foreign nonresident
+* Dual-status alien
+* SALT cap reduced due to high AGI
+
+If Form 2555 is on the return of the parent of a student subject to Kiddie Tax,
+the entered parent taxable income must follow the instructions for line 6 of Form 8615.
+
+TODO:
+
+* NIIT
+* Qualified tips
+* Overtime
+* Auto loan
+* Qualified Business Income (QBI) deduction
+* Traditional IRA deductability
+* EITC (if independent student or has qualifying child)
+* Research other credits that phase out with AGI
+

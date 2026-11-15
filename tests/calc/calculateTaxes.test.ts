@@ -627,6 +627,105 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
     });
 });
 
+describe('calculateTaxes - itemized SALT deductions', () => {
+    it('clamps SALT deductions at saltCap', () => {
+        const rules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.10}],
+            saltCap: 10000,
+        };
+
+        // AGI = $30,000, SALT = $14,000 -> capped at $10,000 deduction.
+        // Taxable income = $30,000 - $10,000 = $20,000.
+        const result = calculateTaxes(rules, {
+            agi: 30000,
+            itemizedSaltDeductions: 14000,
+        });
+        expect(result.taxableIncome).toBe(20000);
+        expect(result.tax).toBe(2000);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('ignores SALT deduction amount above cap', () => {
+        const rules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.10}],
+            saltCap: 10000,
+        };
+
+        const oneOverCap = calculateTaxes(rules, {
+            agi: 25000,
+            itemizedSaltDeductions: 10001,
+        });
+        expect(oneOverCap.taxableIncome).toBe(15000);
+    });
+
+    it('leaves SALT deductions uncapped when saltCap is undefined', () => {
+        const rules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.10}],
+        };
+
+        // AGI = $30,000, SALT = $14,000 -> full $14,000 allowed.
+        // Taxable income = $30,000 - $14,000 = $16,000.
+        const result = calculateTaxes(rules, {
+            agi: 30000,
+            itemizedSaltDeductions: 14000,
+        });
+        expect(result.taxableIncome).toBe(16000);
+        expect(result.tax).toBe(1600);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('treats an explicit saltCap of 0 as a zero cap rather than uncapped', () => {
+        const rules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.10}],
+            saltCap: 0,
+        };
+
+        const result = calculateTaxes(rules, {
+            agi: 20000,
+            itemizedSaltDeductions: 5000,
+        });
+        expect(result.taxableIncome).toBe(20000);
+        expect(result.tax).toBe(2000);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('applies standard deduction when capped SALT deduction is lower than standardDeduction', () => {
+        const rules: TaxRules = {
+            standardDeduction: 12000,
+            brackets: [{until: Infinity, rate: 0.10}],
+            saltCap: 10000,
+        };
+
+        // SALT is $14,000, capped at $10,000, which loses to $12,000 standard deduction.
+        // Taxable income = $25,000 - $12,000 = $13,000.
+        const result = calculateTaxes(rules, {
+            agi: 25000,
+            itemizedSaltDeductions: 14000,
+        });
+        expect(result.taxableIncome).toBe(13000);
+        expect(result.tax).toBe(1300);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('applies capped SALT deduction when it exceeds standard deduction', () => {
+        const dependentRules: TaxRules = {
+            standardDeduction: 2450,
+            brackets: [{until: Infinity, rate: 0.10}],
+            saltCap: 10000,
+        };
+
+        // SALT = $12,000 -> capped at $10,000 (> $2,450 SD).
+        // Taxable income = $20,000 - $10,000 = $10,000.
+        const result = calculateTaxes(dependentRules, {
+            agi: 20000,
+            itemizedSaltDeductions: 12000,
+        });
+        expect(result.taxableIncome).toBe(10000);
+        expect(result.tax).toBe(1000);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+});
+
 describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
     const baseRules: TaxRules = {
         standardDeduction: 10000,
