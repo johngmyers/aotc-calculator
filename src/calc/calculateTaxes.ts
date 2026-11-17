@@ -32,10 +32,13 @@ export interface TaxRules {
         base: number
         earnedAddOn: number
     }
+    disallowItemizedDeductions?: boolean
     itemizedDeductionsUseFederalAgi?: boolean
     medicalDeductionThresholdRate?: number
     miscellaneousDeductionThresholdRate?: number
     saltCap?: number
+    charitableDeductionThresholdRate?: number
+    nonItemizerCashCharitableDeductionCap?: number
     exemption?: ExemptionRules
     kiddieTax?: {
         unearnedIncomeThreshold: number
@@ -57,6 +60,9 @@ export interface GrossIncome {
     // Exemptions
     dependentCount?: number
     seniorOrBlindCount?: number
+
+    cashGiftsToPublicCharities?: number
+    otherCharitableContributions?: number
 
     mustItemize?: boolean
     itemizedMedicalDeductions?: number
@@ -113,10 +119,6 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
     // Standard deduction
     let standardDeduction = rules.standardDeduction ?? 0;
     let itemizing = false
-    if (grossIncome.mustItemize) {
-        itemizing = true
-        standardDeduction = 0;
-    }
     const earnedIncome = grossIncome.earnedIncome ?? 0;
     const taxableScholarships = grossIncome.taxableScholarships ?? 0;
     if (grossIncome.claimedAsDependent && rules.dependentStandardDeduction) {
@@ -128,31 +130,50 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
         standardDeduction = Math.min(standardDeduction, dependentStandardDeduction);
     }
 
+    // Below-the-line, non-itemizer cash contributions deduction
+    standardDeduction += Math.min(grossIncome.cashGiftsToPublicCharities ?? 0, rules.nonItemizerCashCharitableDeductionCap ?? 0);
+
+    if (grossIncome.mustItemize) {
+        itemizing = true
+        standardDeduction = 0;
+    }
+
     // Itemized deductions
     let itemizedDeduction = 0;
 
-    if (grossIncome.itemizedMedicalDeductions) {
-        const phaseout = phaseoutDeduction(rules, grossIncome, rules.medicalDeductionThresholdRate);
-        if (typeof (phaseout) !== 'number') {
-            return phaseout;
+    if (!(rules.disallowItemizedDeductions ?? false)) {
+        if (grossIncome.itemizedMedicalDeductions) {
+            const phaseout = phaseoutDeduction(rules, grossIncome, rules.medicalDeductionThresholdRate);
+            if (typeof (phaseout) !== 'number') {
+                return phaseout;
+            }
+            itemizedDeduction += Math.max(0, grossIncome.itemizedMedicalDeductions - phaseout);
         }
-        itemizedDeduction += Math.max(0, grossIncome.itemizedMedicalDeductions - phaseout);
-    }
 
-    if (grossIncome.itemizedMiscellaneousDeductions) {
-        const phaseout = phaseoutDeduction(rules, grossIncome, rules.miscellaneousDeductionThresholdRate);
-        if (typeof (phaseout) !== 'number') {
-            return phaseout;
+        if (grossIncome.itemizedMiscellaneousDeductions) {
+            const phaseout = phaseoutDeduction(rules, grossIncome, rules.miscellaneousDeductionThresholdRate);
+            if (typeof (phaseout) !== 'number') {
+                return phaseout;
+            }
+            itemizedDeduction += Math.max(0, grossIncome.itemizedMiscellaneousDeductions - phaseout);
         }
-        itemizedDeduction += Math.max(0, grossIncome.itemizedMiscellaneousDeductions - phaseout);
-    }
 
-    if (grossIncome.itemizedSaltDeductions) {
-        const saltCap = rules.saltCap ?? Infinity;
-        itemizedDeduction += Math.min(grossIncome.itemizedSaltDeductions, saltCap);
-    }
+        if (grossIncome.itemizedSaltDeductions) {
+            const saltCap = rules.saltCap ?? Infinity;
+            itemizedDeduction += Math.min(grossIncome.itemizedSaltDeductions, saltCap);
+        }
 
-    itemizedDeduction += grossIncome.itemizedOtherDeductions ?? 0;
+        const itemizedCharitableDeductions = (grossIncome.cashGiftsToPublicCharities ?? 0) + (grossIncome.otherCharitableContributions ?? 0);
+        if (itemizedCharitableDeductions > 0) {
+            const phaseout = phaseoutDeduction(rules, grossIncome, rules.charitableDeductionThresholdRate);
+            if (typeof (phaseout) !== 'number') {
+                return phaseout;
+            }
+            itemizedDeduction += Math.max(0, itemizedCharitableDeductions - phaseout);
+        }
+
+        itemizedDeduction += grossIncome.itemizedOtherDeductions ?? 0;
+    }
 
     const deduction = Math.max(standardDeduction, itemizedDeduction);
     if (deduction > standardDeduction) {

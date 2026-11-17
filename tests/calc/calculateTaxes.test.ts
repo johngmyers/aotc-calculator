@@ -522,6 +522,21 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
         expect(result.taxableIncome).toBe(20000);
         expect(result.tax).toBe(2000);
     });
+
+    it('disallows itemized medical deductions on a flat-tax rule', () => {
+        const flatTaxRules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.05}],
+            disallowItemizedDeductions: true,
+        };
+
+        const result = calculateTaxes(flatTaxRules, {
+            agi: 30000,
+            itemizedMedicalDeductions: 5000,
+        });
+        expect(result.taxableIncome).toBe(30000);
+        expect(result.tax).toBe(1500);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
 });
 
 describe('calculateTaxes - miscellaneousDeductions', () => {
@@ -625,6 +640,21 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
         expect(result.taxableIncome).toBe(20000);
         expect(result.tax).toBe(2000);
     });
+
+    it('disallows itemized miscellaneous deductions on a flat-tax rule', () => {
+        const flatTaxRules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.05}],
+            disallowItemizedDeductions: true,
+        };
+
+        const result = calculateTaxes(flatTaxRules, {
+            agi: 30000,
+            itemizedMiscellaneousDeductions: 5000,
+        });
+        expect(result.taxableIncome).toBe(30000);
+        expect(result.tax).toBe(1500);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
 });
 
 describe('calculateTaxes - itemized SALT deductions', () => {
@@ -723,6 +753,262 @@ describe('calculateTaxes - itemized SALT deductions', () => {
         expect(result.taxableIncome).toBe(10000);
         expect(result.tax).toBe(1000);
         expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('disallows itemized SALT deductions on a flat-tax rule', () => {
+        const flatTaxRules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.05}],
+            disallowItemizedDeductions: true,
+        };
+
+        const result = calculateTaxes(flatTaxRules, {
+            agi: 30000,
+            itemizedSaltDeductions: 5000,
+        });
+        expect(result.taxableIncome).toBe(30000);
+        expect(result.tax).toBe(1500);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+});
+
+describe('calculateTaxes - charitableContributions', () => {
+    const baseCharitableRules: TaxRules = {
+        standardDeduction: 10000,
+        brackets: [
+            {until: 20000, rate: 0.10},
+            {until: Infinity, rate: 0.20},
+        ],
+        charitableDeductionThresholdRate: 0.005, // 0.5% AGI floor for itemizers
+    };
+
+    const nonItemizerCharitableRules: TaxRules = {
+        standardDeduction: 10000,
+        brackets: [
+            {until: 20000, rate: 0.10},
+            {until: Infinity, rate: 0.20},
+        ],
+        charitableDeductionThresholdRate: 0.005, // 0.5% AGI floor for itemizers
+        nonItemizerCashCharitableDeductionCap: 1000,
+    };
+
+    it('applies charitableDeductionThresholdRate floor to combined cash and other charitable gifts when itemizing', () => {
+        // AGI = $20,000 -> 0.5% floor = round(20,000 * 0.005) = $100.
+        // Total charitable = $3,000 cash + $2,100 other = $5,100.
+        // Deductible charitable = max(0, $5,100 - $100) = $5,000.
+        // Plus itemizedOtherDeductions = $7,000 -> total itemized = $12,000 (> $10,000 standard deduction).
+        // Taxable income = $20,000 - $12,000 = $8,000 -> tax = $800.
+        const result = calculateTaxes(baseCharitableRules, {
+            agi: 20000,
+            cashGiftsToPublicCharities: 3000,
+            otherCharitableContributions: 2100,
+            itemizedOtherDeductions: 7000,
+        });
+        expect(result.taxableIncome).toBe(8000);
+        expect(result.tax).toBe(800);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('clamps deductible itemized charitable contributions at 0 when total charitable is at or below the floor', () => {
+        // AGI = $40,000 -> 0.5% floor = $200.
+        // Total charitable = $120 cash + $80 other = $200 (equals floor -> $0 above floor).
+        // Itemized other = $12,000 -> total itemized = $12,000.
+        // Taxable income = $40,000 - $12,000 = $28,000.
+        const result = calculateTaxes(baseCharitableRules, {
+            agi: 40000,
+            cashGiftsToPublicCharities: 120,
+            otherCharitableContributions: 80,
+            itemizedOtherDeductions: 12000,
+        });
+        expect(result.taxableIncome).toBe(28000);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('rounds a 50-cent charitable AGI floor exclusion to the nearest dollar', () => {
+        // AGI = $19,900 -> 0.5% floor = $19,900 * 0.005 = $99.50 (exact $0.50 fractional part) -> rounds to $100.
+        // Cash gifts = $1,000 -> itemized charitable = $1,000 - $100 = $900.
+        // Itemized other = $10,200 -> itemized = $11,100 (> $11,000 standard + cash).
+        // Taxable income = $19,900 - $11,100 = $8,800.
+        const result = calculateTaxes(nonItemizerCharitableRules, {
+            agi: 19900,
+            cashGiftsToPublicCharities: 1000,
+            itemizedOtherDeductions: 10200,
+        });
+        expect(result.taxableIncome).toBe(8800);
+    });
+
+    it('deducts only cash contributions when taking standard deduction', () => {
+        // AGI = $25,000, cashGifts = $600 (below $1,000 cap), otherCharitable = $4,000, itemizedOther = $3,000.
+        // Standard + cash deduction = $10,000 + $600 = $10,600 (not the full $1,000 cap, and $4,000 otherCharitable excluded).
+        // Taxable income = $25,000 - $10,600 = $14,400 -> tax = $1,440.
+        const result = calculateTaxes(nonItemizerCharitableRules, {
+            agi: 25000,
+            cashGiftsToPublicCharities: 600,
+            otherCharitableContributions: 4000,
+            itemizedOtherDeductions: 3000,
+        });
+        expect(result.taxableIncome).toBe(14400);
+        expect(result.tax).toBe(1440);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('caps non-itemizer cash charitable deduction at nonItemizerCashCharitableDeductionCap when taking standard deduction', () => {
+        // AGI = $25,000, cashGifts = $2,500, capped at $1,000 non-itemizer limit.
+        // Standard + capped cash deduction = $10,000 + $1,000 = $11,000.
+        // Taxable income = $25,000 - $11,000 = $14,000 -> tax = $1,400.
+        const result = calculateTaxes(nonItemizerCharitableRules, {
+            agi: 25000,
+            cashGiftsToPublicCharities: 2500,
+        });
+        expect(result.taxableIncome).toBe(14000);
+        expect(result.tax).toBe(1400);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('does not apply non-itemizer cash charitable deduction when mustItemize is true', () => {
+        // AGI = $20,000 -> 0.5% floor = $100.
+        // Cash gifts = $1,000, no other charitable or itemized deductions.
+        // Because mustItemize is true, standard deduction and non-itemizer cash deduction are both 0;
+        // itemized deduction = max(0, $1,000 - $100) = $900.
+        // Taxable income = $20,000 - $900 = $19,100 -> tax = $1,910.
+        const result = calculateTaxes(nonItemizerCharitableRules, {
+            agi: 20000,
+            mustItemize: true,
+            cashGiftsToPublicCharities: 1000,
+        });
+        expect(result.taxableIncome).toBe(19100);
+        expect(result.tax).toBe(1910);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('chooses standard deduction when itemized exceeds standard deduction but loses to standard plus non-itemizer cash deduction', () => {
+        // AGI = $20,000 -> 0.5% floor = $100.
+        // Cash gifts = $1,000 -> itemized charitable = $1,000 - $100 = $900.
+        // Plus itemizedOtherDeductions = $9,200 -> itemized = $10,100 (> $10,000 standard deduction).
+        // Standard + non-itemizer cash deduction = $10,000 + $1,000 = $11,000 (beats $10,100 itemized).
+        // Taxable income = $20,000 - $11,000 = $9,000 -> tax = $900.
+        const result = calculateTaxes(nonItemizerCharitableRules, {
+            agi: 20000,
+            cashGiftsToPublicCharities: 1000,
+            itemizedOtherDeductions: 9200,
+        });
+        expect(result.taxableIncome).toBe(9000);
+        expect(result.tax).toBe(900);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('chooses standard plus non-itemizer cash deduction when it beats itemized by $1, and switches at the $1 fencepost', () => {
+        // AGI = $20,000 -> 0.5% floor = $100.
+        // Cash gifts = $1,000 -> standard + cash = $10,000 + $1,000 = $11,000; itemized charitable = $900.
+        // With itemizedOtherDeductions = $10,099 -> itemized = $10,099 + $900 = $10,999 ($1 below $11,000).
+        const oneDollarBelow = calculateTaxes(nonItemizerCharitableRules, {
+            agi: 20000,
+            cashGiftsToPublicCharities: 1000,
+            itemizedOtherDeductions: 10099,
+        });
+        expect(oneDollarBelow.taxableIncome).toBe(9000); // $20,000 - $11,000
+        expect(oneDollarBelow.tax).toBe(900);
+
+        // With itemizedOtherDeductions = $10,101 -> itemized = $10,101 + $900 = $11,001 ($1 above $11,000).
+        const oneDollarAbove = calculateTaxes(nonItemizerCharitableRules, {
+            agi: 20000,
+            cashGiftsToPublicCharities: 1000,
+            itemizedOtherDeductions: 10101,
+        });
+        expect(oneDollarAbove.taxableIncome).toBe(8999); // $20,000 - $11,001
+        expect(oneDollarAbove.tax).toBe(900);
+    });
+
+    it('does not add cashGiftsToPublicCharities when nonItemizerCashCharitableDeduction is false or omitted', () => {
+        // AGI = $20,000, standardDeduction = $10,000, cashGifts = $1,000, itemizedOther = $5,000.
+        // Without nonItemizerCashCharitableDeduction, standard deduction remains $10,000.
+        // Taxable income = $20,000 - $10,000 = $10,000 -> tax = $1,000.
+        const result = calculateTaxes(baseCharitableRules, {
+            agi: 20000,
+            cashGiftsToPublicCharities: 1000,
+            otherCharitableContributions: 2000,
+            itemizedOtherDeductions: 5000,
+        });
+        expect(result.taxableIncome).toBe(10000);
+        expect(result.tax).toBe(1000);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('applies neither itemized floor nor non-itemizer cash charitable deduction on a flat-tax rule set', () => {
+        const flatTaxRules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.05}],
+            disallowItemizedDeductions: true,
+        };
+
+       const result = calculateTaxes(flatTaxRules, {
+            agi: 30000,
+            cashGiftsToPublicCharities: 1000,
+            otherCharitableContributions: 5000,
+        });
+        expect(result.taxableIncome).toBe(30000);
+        expect(result.tax).toBe(1500);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('uses federalAgi for the charitable floor when itemizedDeductionsUseFederalAgi is enabled', () => {
+        const federalAgiRules: TaxRules = {
+            ...baseCharitableRules,
+            standardDeduction: 0,
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        // AGI = $50,000, Federal AGI = $20,000 -> floor = 0.5% * $20,000 = $100.
+        // Cash gifts = $2,100 -> deductible = $2,100 - $100 = $2,000.
+        // Taxable income = $50,000 - $2,000 = $48,000.
+        const result = calculateTaxes(federalAgiRules, {
+            agi: 50000,
+            federalAgi: 20000,
+            cashGiftsToPublicCharities: 2100,
+        });
+        expect(result.taxableIncome).toBe(48000);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('does not return MISSING_FEDERAL_AGI when itemizedDeductionsUseFederalAgi is true and there are no charitable contributions', () => {
+        const federalAgiRules: TaxRules = {
+            ...baseCharitableRules,
+            standardDeduction: 0,
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        const result = calculateTaxes(federalAgiRules, {
+            agi: 50000,
+            itemizedOtherDeductions: 5000,
+        });
+        expect(result).not.toHaveProperty('errorCode');
+        expect(result.taxableIncome).toBe(45000);
+    });
+
+    it('returns MISSING_FEDERAL_AGI when itemizedDeductionsUseFederalAgi is true, federalAgi is missing, and cashGiftsToPublicCharities is present', () => {
+        const federalAgiRules: TaxRules = {
+            ...baseCharitableRules,
+            standardDeduction: 0,
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        const result = calculateTaxes(federalAgiRules, {
+            agi: 50000,
+            cashGiftsToPublicCharities: 2000,
+        });
+        expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
+    });
+
+    it('returns MISSING_FEDERAL_AGI when itemizedDeductionsUseFederalAgi is true, federalAgi is missing, and otherCharitableContributions is present', () => {
+        const federalAgiRules: TaxRules = {
+            ...baseCharitableRules,
+            standardDeduction: 0,
+            itemizedDeductionsUseFederalAgi: true,
+        };
+
+        const result = calculateTaxes(federalAgiRules, {
+            agi: 50000,
+            otherCharitableContributions: 2000,
+        });
+        expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
     });
 });
 
@@ -907,6 +1193,21 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
 
         expect(result.taxableIncome).toBe(35000);
         expect(result.tax).toBe(5500);
+        expect(result.outOfScopeForVITA).toBe(false);
+    });
+
+    it('disallows itemized other deductions on a flat-tax rule', () => {
+        const flatTaxRules: TaxRules = {
+            brackets: [{until: Infinity, rate: 0.05}],
+            disallowItemizedDeductions: true,
+        };
+
+        const result = calculateTaxes(flatTaxRules, {
+            agi: 30000,
+            itemizedOtherDeductions: 5000,
+        });
+        expect(result.taxableIncome).toBe(30000);
+        expect(result.tax).toBe(1500);
         expect(result.outOfScopeForVITA).toBe(false);
     });
 });
