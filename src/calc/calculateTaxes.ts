@@ -234,9 +234,9 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
     const unearnedIncome = grossIncome.agi - earnedIncome;
     if (rules.kiddieTax && grossIncome.parent && unearnedIncome > rules.kiddieTax.unearnedIncomeThreshold) {
         outOfScopeForVITA = true;
-        const unearnedIncomeThreshold = itemizing ?
-            rules.kiddieTax.itemizedBase + (grossIncome.directlyConnectedItemizedDeductions ?? 0) :
-            rules.kiddieTax.unearnedIncomeThreshold;
+        const unearnedIncomeThreshold = Math.max(
+            rules.kiddieTax.itemizedBase + (itemizing ? grossIncome.directlyConnectedItemizedDeductions ?? 0 : 0),
+            rules.kiddieTax.unearnedIncomeThreshold);
         if (unearnedIncome > unearnedIncomeThreshold && taxableIncome > 0) {
             const unearnedAboveThreshold = Math.min(unearnedIncome - unearnedIncomeThreshold, taxableIncome);
             const ltcgAboveThreshold = Math.min(unearnedAboveThreshold, ltcg);

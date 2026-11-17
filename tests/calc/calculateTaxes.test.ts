@@ -1523,6 +1523,36 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
         expect(result.outOfScopeForVITA).toBe(true);
     });
 
+    it('keeps the Kiddie Tax unearned threshold floor when itemizing with zero directly connected deductions', () => {
+        // Child AGI = $15,000 ($3,000 earned + $12,000 unearned), itemizedOtherDeductions = $5,000,
+        // directlyConnectedItemizedDeductions omitted / 0.
+        // Child Taxable Income = $15,000 - $5,000 = $10,000.
+        // Line 2 threshold = max(itemizedBase $1,350 + $0, unearnedIncomeThreshold $2,600) = $2,600.
+        // Net Unearned Income = $12,000 - $2,600 = $9,400.
+        // Child-rate portion = $10,000 TI - $9,400 NUI = $600 @ 10% = $60.00.
+        // Parent stack ($90,000 + $9,400 = $99,400):
+        // - $6,000 ($90k to $96k) @ 12% = $720.00
+        // - $3,400 ($96k to $99.4k) @ 22% = $748.00
+        // Incremental Parent Tax = $1,468.00 -> Total Tax = $60 + $1,468 = $1,528.
+        const income: GrossIncome = {
+            agi: 15000,
+            claimedAsDependent: true,
+            earnedIncome: 3000,
+            itemizedOtherDeductions: 5000,
+            parent: {
+                income: {
+                    taxableIncome: 90000,
+                },
+                rules: parentRules,
+            },
+        };
+
+        const result = calculateTaxes(childRules, income);
+        expect(result.taxableIncome).toBe(10000);
+        expect(result.tax).toBe(1528);
+        expect(result.outOfScopeForVITA).toBe(true);
+    });
+
     it('generates zero Kiddie Tax when taxable income is 0 despite unearned income exceeding the threshold (Line 5 bail)', () => {
         // - Child AGI = $10,000 unearned, earnedIncome = $0.
         // - Itemized deductions = $10,000 (exceeding dependent standard deduction of $1,400).
