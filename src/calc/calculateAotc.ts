@@ -46,6 +46,13 @@ export function calculateAotc(rules: FederalTaxRules, input: AotcInput) : AotcRe
         }
     }
 
+    if (input.agi > rules.aotc.phaseoutStart) {
+        const excessAgi = input.agi - rules.aotc.phaseoutStart;
+        const rangeLeft = Math.max(0, rules.aotc.phaseoutRange - excessAgi);
+        const inclusionFactor = round((rangeLeft * 1000) / rules.aotc.phaseoutRange) / 1000.0;
+        adjustedExpenses = round(adjustedExpenses * inclusionFactor);
+    }
+
     const refundableCredit = (input.refundableIneligible ?? false) ? 0 : round(adjustedExpenses * rules.aotc.refundableRate);
 
     return {
