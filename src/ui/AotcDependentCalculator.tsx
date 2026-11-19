@@ -1,7 +1,17 @@
 import {useId, useState} from "react";
 import {getTranslator, Translator} from "./i18n.js";
 import {HelpTooltip} from "./HelpTooltip.js";
-import {FederalRules} from "../rules/federal.js";
+import {FederalRules, FilingStatus} from "../rules/federal.js";
+
+const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
+
+const FILING_STATUS_LABEL_KEYS = {
+    single: "filingStatusSingle",
+    hoh: "filingStatusHoh",
+    mfj: "filingStatusMfj",
+    mfs: "filingStatusMfs",
+    qss: "filingStatusQss",
+} as const;
 
 export interface AotcDependentCalculatorProps {
     t?: Translator
@@ -33,6 +43,10 @@ export function AotcDependentCalculator({
     })();
     const taxYearSelectId = useId();
     const [taxYear, setTaxYear] = useState<number>(defaultTaxYear);
+
+    const claimantHeadingId = useId();
+    const claimantFilingStatusSelectId = useId();
+    const [claimantFilingStatus, setClaimantFilingStatus] = useState<FilingStatus>("mfj");
 
     return (
         <main className="aotc-dependent-calculator">
@@ -73,6 +87,29 @@ export function AotcDependentCalculator({
                         {federalTaxYears.map((y) => (
                             <option key={y} value={y}>
                                 {y}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </section>
+
+            <hr/>
+
+            <section aria-labelledby={claimantHeadingId}>
+                <h2 id={claimantHeadingId}>
+                    <center>{t("claimantSectionTitle")}</center>
+                </h2>
+
+                <div>
+                    <label htmlFor={claimantFilingStatusSelectId}>{t("filingStatusLabel")}</label>{" "}
+                    <select
+                        id={claimantFilingStatusSelectId}
+                        value={claimantFilingStatus}
+                        onChange={(e) => setClaimantFilingStatus(e.target.value as FilingStatus)}
+                    >
+                        {FILING_STATUS_ORDER.map((status) => (
+                            <option key={status} value={status}>
+                                {t(FILING_STATUS_LABEL_KEYS[status])}
                             </option>
                         ))}
                     </select>

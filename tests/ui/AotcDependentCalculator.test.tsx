@@ -166,3 +166,76 @@ describe("AotcDependentCalculator", () => {
         expect(Number(select.value)).toBe(targetYear);
     });
 });
+
+describe("Claimant section", () => {
+    it("renders a Claimant landmark region, defaults filing status to MFJ, and orders options properly", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        expect(claimantRegion).toBeInTheDocument();
+
+        expect(
+            within(claimantRegion).getByRole("heading", {
+                level: 2,
+                name: EN_US_BUNDLE.claimantSectionTitle,
+            }),
+        ).toBeInTheDocument();
+
+        const select = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        }) as HTMLSelectElement;
+
+        expect(select.value).toBe("mfj");
+
+        const optionValues = Array.from(select.options).map((opt) => opt.value);
+        expect(optionValues).toEqual(["single", "hoh", "mfj", "mfs", "qss"]);
+
+        const optionLabels = Array.from(select.options).map((opt) => opt.textContent);
+        expect(optionLabels).toEqual([
+            EN_US_BUNDLE.filingStatusSingle,
+            EN_US_BUNDLE.filingStatusHoh,
+            EN_US_BUNDLE.filingStatusMfj,
+            EN_US_BUNDLE.filingStatusMfs,
+            EN_US_BUNDLE.filingStatusQss,
+        ]);
+    });
+
+    it("updates claimant filing status when changed by the user", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const select = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        }) as HTMLSelectElement;
+
+        fireEvent.change(select, {target: {value: "hoh"}});
+        expect(select.value).toBe("hoh");
+    });
+
+    it("localizes the Claimant section heading, landmark, and filing status labels", () => {
+        const pig = makePigLatinTranslator(EN_US_BUNDLE, {preserveHtmlTags: true});
+        render(<AotcDependentCalculator t={pig}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: pig("claimantSectionTitle"),
+        });
+        expect(claimantRegion).toBeInTheDocument();
+
+        const select = within(claimantRegion).getByRole("combobox", {
+            name: pig("filingStatusLabel"),
+        }) as HTMLSelectElement;
+
+        const optionLabels = Array.from(select.options).map((opt) => opt.textContent);
+        expect(optionLabels).toEqual([
+            pig("filingStatusSingle"),
+            pig("filingStatusHoh"),
+            pig("filingStatusMfj"),
+            pig("filingStatusMfs"),
+            pig("filingStatusQss"),
+        ]);
+    });
+});

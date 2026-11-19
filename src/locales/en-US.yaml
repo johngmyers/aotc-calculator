@@ -25,3 +25,10 @@ stayWithinVitaScopeTooltip: >-
   Keeps student returns within VITA/TCE scope by not considering
   scenarios where the student is required to file Form 8615 (kiddie tax).
 taxYearLabel: Tax year
+claimantSectionTitle: Claimant
+filingStatusLabel: Filing status
+filingStatusSingle: Single
+filingStatusHoh: Head of Household
+filingStatusMfj: Married Filing Jointly
+filingStatusMfs: Married Filing Separately
+filingStatusQss: Qualifying Surviving Spouse
