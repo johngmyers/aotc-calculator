@@ -2,10 +2,6 @@ helpTooltipDefaultTriggerLabel: More information
 title: American Opportunity Tax Credit (AOTC) Optimizing Calculator
 subtitle: For claimants with dependent students
 calculatorSettingsSectionLabel: Calculator settings
-stayWithinVitaScopeLabel: Stay within scope for VITA/TCE
-stayWithinVitaScopeTooltip: >-
-  Keeps student returns within VITA/TCE scope by not considering
-  scenarios where the student is required to file Form 8615 (kiddie tax).
 scopeExclusionsBlurb: |-
   <p>The following are out of scope for the calculator, if on a <b>student</b> return:</p>
   <ul>
@@ -24,3 +20,8 @@ scopeExclusionsBlurb: |-
     <li>Net Investment Income Tax (NIIT)</li>
     <li>Earned Income Tax Credit (EITC) (due to having a qualifying child)</li>
   </ul>
+stayWithinVitaScopeLabel: Stay within scope for VITA/TCE
+stayWithinVitaScopeTooltip: >-
+  Keeps student returns within VITA/TCE scope by not considering
+  scenarios where the student is required to file Form 8615 (kiddie tax).
+taxYearLabel: Tax year
