@@ -1,0 +1,26 @@
+helpTooltipDefaultTriggerLabel: More information
+title: American Opportunity Tax Credit (AOTC) Optimizing Calculator
+subtitle: For claimants with dependent students
+calculatorSettingsSectionLabel: Calculator settings
+stayWithinVitaScopeLabel: Stay within scope for VITA/TCE
+stayWithinVitaScopeTooltip: >-
+  Keeps student returns within VITA/TCE scope by not considering
+  scenarios where the student is required to file Form 8615 (kiddie tax).
+scopeExclusionsBlurb: |-
+  <p>The following are out of scope for the calculator, if on a <b>student</b> return:</p>
+  <ul>
+    <li>Qualified Business Income (QBI) deduction is reduced by taxable income being either very low or above the high-income threshold</li>
+    <li>Alternative Minimum Tax (AMT) owed</li>
+    <li>Charitable contribution carryforwards</li>
+    <li>Itemized deduction benefit reduced due to being in a high (37%) tax bracket</li>
+    <li>Itemized deductions reduced due to high AGI</li>
+    <li>Net Operating Loss (NOL) carryforwards</li>
+    <li>Form 2555 (Foreign Earned Income)</li>
+    <li>Income from sources from American territories excluded by bona-fide resident</li>
+    <li>Foreign nonresident</li>
+    <li>Dual-status alien</li>
+    <li>SALT cap reduced due to high AGI</li>
+    <li>Traditional IRA contribution deduction reduced due to high AGI</li>
+    <li>Net Investment Income Tax (NIIT)</li>
+    <li>Earned Income Tax Credit (EITC) (due to having a qualifying child)</li>
+  </ul>

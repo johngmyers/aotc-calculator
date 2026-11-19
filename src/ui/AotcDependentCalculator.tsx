@@ -1,25 +1,41 @@
-import { useState } from "react";
+import {useState} from "react";
+import {getTranslator, Translator} from "./i18n.js";
+import {HelpTooltip} from "./HelpTooltip.js";
 
-export function AotcDependentCalculator() {
-  const [stayWithinVitaScope, setStayWithinVitaScope] = useState<boolean>(false);
+export interface AotcDependentCalculatorProps {
+    t?: Translator;
+}
 
-  return (
-    <main className="aotc-dependent-calculator">
-      <header>
-        <h1>American Opportunity Tax Credit (AOTC) Optimizing Calculator</h1>
-        <h2>For claimants with dependent students</h2>
-      </header>
+export function AotcDependentCalculator({
+                                            t = getTranslator(),
+                                        }: AotcDependentCalculatorProps) {
+    const [stayWithinVitaScope, setStayWithinVitaScope] = useState<boolean>(false);
 
-      <section aria-label="Scope">
-        <label>
-          <input
-            type="checkbox"
-            checked={stayWithinVitaScope}
-            onChange={(e) => setStayWithinVitaScope(e.target.checked)}
-          />
-          Stay within scope for VITA/TCE
-        </label>
-      </section>
-    </main>
-  );
+    return (
+        <main className="aotc-dependent-calculator">
+            <header>
+                <h1>
+                    <center>{t("title")}</center>
+                </h1>
+                <center>{t("subtitle")}</center>
+            </header>
+
+            <div
+                className="scope-exclusions"
+                dangerouslySetInnerHTML={{__html: t("scopeExclusionsBlurb")}}
+            />
+
+            <section aria-label={t("calculatorSettingsSectionLabel")}>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={stayWithinVitaScope}
+                        onChange={(e) => setStayWithinVitaScope(e.target.checked)}
+                    />
+                    {t("stayWithinVitaScopeLabel")}
+                </label>
+                <HelpTooltip t={t} textKey="stayWithinVitaScopeTooltip"/>
+            </section>
+        </main>
+    );
 }
