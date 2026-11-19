@@ -1,7 +1,8 @@
-import {useId, useState} from "react";
+import {ReactNode, useId, useState} from "react";
 import {getTranslator, Translator} from "./i18n.js";
 import {HelpTooltip} from "./HelpTooltip.js";
-import {FederalRules, FilingStatus} from "../rules/federal.js";
+import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
+import {wrapNodes} from "./wrapNodes.js";
 
 const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
@@ -48,21 +49,23 @@ export function AotcDependentCalculator({
     const claimantFilingStatusSelectId = useId();
     const [claimantFilingStatus, setClaimantFilingStatus] = useState<FilingStatus>("mfj");
 
-    return (
-        <main className="aotc-dependent-calculator">
-            <header>
+    return wrapNodes("main", {className: "aotc-dependent-calculator"}, () => {
+        let ignoreRest = false;
+        const sections: ReactNode[] = [
+            <header key="header">
                 <h1>
                     <center>{t("title")}</center>
                 </h1>
                 <center>{t("subtitle")}</center>
-            </header>
+            </header>,
 
             <div
+                key="scope-exclusions"
                 className="scope-exclusions"
                 dangerouslySetInnerHTML={{__html: t("scopeExclusionsBlurb")}}
-            />
+            />,
 
-            <section aria-label={t("calculatorSettingsSectionLabel")}>
+            <section key="calculator-settings" aria-label={t("calculatorSettingsSectionLabel")}>
                 <div>
                     <label>
                         <input
@@ -91,16 +94,21 @@ export function AotcDependentCalculator({
                         ))}
                     </select>
                 </div>
-            </section>
+            </section>,
 
-            <hr/>
+            <hr key="hr-claimant"/>,
+        ];
 
-            <section aria-labelledby={claimantHeadingId}>
-                <h2 id={claimantHeadingId}>
+        const claimantTaxRules =
+            FederalRules[taxYear as FederalTaxYear]?.[claimantFilingStatus];
+
+        sections.push(wrapNodes("section", {key: "claimant", "aria-labelledby": claimantHeadingId}, () => {
+            const claimantSectionItems: ReactNode[] = [
+                <h2 key="claimant-header" id={claimantHeadingId}>
                     <center>{t("claimantSectionTitle")}</center>
-                </h2>
+                </h2>,
 
-                <div>
+                <div key="claimant-filing-status">
                     <label htmlFor={claimantFilingStatusSelectId}>{t("filingStatusLabel")}</label>{" "}
                     <select
                         id={claimantFilingStatusSelectId}
@@ -113,8 +121,21 @@ export function AotcDependentCalculator({
                             </option>
                         ))}
                     </select>
-                </div>
-            </section>
-        </main>
-    );
+                </div>,
+            ];
+
+            if (!claimantTaxRules?.aotc) {
+                claimantSectionItems.push(
+                    <div key="aotc-disallowed" role="status" className="aotc-disallowed-notice">
+                        <span aria-hidden="true">⚠</span> {t("aotcDisallowedByFilingStatus")}
+                    </div>,
+                );
+                ignoreRest = true;
+            }
+
+            return claimantSectionItems;
+        }));
+
+        return sections;
+    });
 }

@@ -238,4 +238,58 @@ describe("Claimant section", () => {
             pig("filingStatusQss"),
         ]);
     });
+
+    it("displays disallowed notice with warning symbol and keeps filing status dropdown visible for MFS", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const select = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        }) as HTMLSelectElement;
+
+        fireEvent.change(select, {target: {value: "mfs"}});
+        expect(select.value).toBe("mfs");
+        expect(select).toBeInTheDocument();
+
+        const statusNotice = within(claimantRegion).getByRole("status");
+        expect(statusNotice).toHaveTextContent(/⚠/);
+        expect(statusNotice).toHaveTextContent(EN_US_BUNDLE.aotcDisallowedByFilingStatus);
+    });
+
+    it("removes the disallowed notice when switching back to an allowed filing status", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const select = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        }) as HTMLSelectElement;
+
+        fireEvent.change(select, {target: {value: "mfs"}});
+        expect(within(claimantRegion).getByRole("status")).toBeInTheDocument();
+
+        fireEvent.change(select, {target: {value: "mfj"}});
+        expect(within(claimantRegion).queryByRole("status")).toBeNull();
+        expect(select.value).toBe("mfj");
+    });
+
+    it("localizes the AOTC disallowed notice while preserving the warning symbol", () => {
+        const pig = makePigLatinTranslator(EN_US_BUNDLE, {preserveHtmlTags: true});
+        render(<AotcDependentCalculator t={pig}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: pig("claimantSectionTitle"),
+        });
+        const select = within(claimantRegion).getByRole("combobox", {
+            name: pig("filingStatusLabel"),
+        }) as HTMLSelectElement;
+
+        fireEvent.change(select, {target: {value: "mfs"}});
+        const statusNotice = within(claimantRegion).getByRole("status");
+        expect(statusNotice).toHaveTextContent(/⚠/);
+        expect(statusNotice).toHaveTextContent(pig("aotcDisallowedByFilingStatus"));
+    });
 });

@@ -16,7 +16,7 @@ const AOTC_RULES_2009_SINGLE: AotcRules = {
     phaseoutStart: 80000,
     phaseoutRange: 10000,
     refundableRate: 0.4,
-};
+} as const;
 
 const AOTC_RULES_2009_JOINT: AotcRules = {
     firstTierCap: 2000,
@@ -25,7 +25,7 @@ const AOTC_RULES_2009_JOINT: AotcRules = {
     phaseoutStart: 160000,
     phaseoutRange: 20000,
     refundableRate: 0.4,
-};
+} as const;
 
 /**
  * Data lookup for AOTC rules by filing status.
@@ -37,7 +37,7 @@ const AOTC_RULES_BY_STATUS_2009: Partial<Record<FilingStatus, AotcRules>> = {
     hoh: AOTC_RULES_2009_SINGLE,
     mfj: AOTC_RULES_2009_JOINT,
     qss: AOTC_RULES_2009_JOINT,
-};
+} as const;
 
 // 2026 Ordinary Brackets & Standard Deductions (Rev. Proc. 2025-32)
 const BRACKETS_2026_SINGLE: TaxBrackets = [
@@ -48,7 +48,7 @@ const BRACKETS_2026_SINGLE: TaxBrackets = [
     { rate: 0.32, until: 256225 },
     { rate: 0.35, until: 640600 },
     { rate: 0.37, until: Infinity },
-];
+] as const;
 
 const BRACKETS_2026_JOINT: TaxBrackets = [
     { rate: 0.10, until: 24800 },
@@ -58,7 +58,7 @@ const BRACKETS_2026_JOINT: TaxBrackets = [
     { rate: 0.32, until: 512450 },
     { rate: 0.35, until: 768700 },
     { rate: 0.37, until: Infinity },
-];
+] as const;
 
 // MFS matches Single through 32% ($256,225), then splits at 35% ($384,350 = half of MFJ $768,700).
 const BRACKETS_2026_MFS: TaxBrackets = [
@@ -69,7 +69,7 @@ const BRACKETS_2026_MFS: TaxBrackets = [
     { rate: 0.32, until: 256225 },
     { rate: 0.35, until: 384350 },
     { rate: 0.37, until: Infinity },
-];
+] as const;
 
 const BRACKETS_2026_HOH: TaxBrackets = [
     { rate: 0.10, until: 17700 },
@@ -79,7 +79,7 @@ const BRACKETS_2026_HOH: TaxBrackets = [
     { rate: 0.32, until: 256200 },
     { rate: 0.35, until: 640600 },
     { rate: 0.37, until: Infinity },
-];
+] as const;
 
 const BRACKETS_2026: Record<FilingStatus, TaxBrackets> = {
     single: BRACKETS_2026_SINGLE,
@@ -87,7 +87,7 @@ const BRACKETS_2026: Record<FilingStatus, TaxBrackets> = {
     qss: BRACKETS_2026_JOINT,
     mfs: BRACKETS_2026_MFS,
     hoh: BRACKETS_2026_HOH,
-};
+} as const;
 
 const STANDARD_DEDUCTION_2026_SINGLE = 16100;
 const STANDARD_DEDUCTION_2026_JOINT = 32200;
@@ -98,32 +98,32 @@ const STANDARD_DEDUCTION_2026: Record<FilingStatus, number> = {
     qss: STANDARD_DEDUCTION_2026_JOINT,
     mfs: STANDARD_DEDUCTION_2026_SINGLE,
     hoh: 24150,
-};
+} as const;
 
 // 2026 Long-Term Capital Gains Brackets (IRC § 1(h) / § 1(j)(5))
 const LTCG_BRACKETS_2026_SINGLE: TaxBrackets = [
     { rate: 0.00, until: 49450 },
     { rate: 0.15, until: 545500 },
     { rate: 0.20, until: Infinity },
-];
+] as const;
 
 const LTCG_BRACKETS_2026_JOINT: TaxBrackets = [
     { rate: 0.00, until: 98900 },
     { rate: 0.15, until: 613700 },
     { rate: 0.20, until: Infinity },
-];
+] as const;
 
 const LTCG_BRACKETS_2026_MFS: TaxBrackets = [
     { rate: 0.00, until: 49450 },
     { rate: 0.15, until: 306850 },
     { rate: 0.20, until: Infinity },
-];
+] as const;
 
 const LTCG_BRACKETS_2026_HOH: TaxBrackets = [
     { rate: 0.00, until: 66200 },
     { rate: 0.15, until: 579600 },
     { rate: 0.20, until: Infinity },
-];
+] as const;
 
 const LTCG_BRACKETS_2026: Record<FilingStatus, TaxBrackets> = {
     single: LTCG_BRACKETS_2026_SINGLE,
@@ -131,7 +131,7 @@ const LTCG_BRACKETS_2026: Record<FilingStatus, TaxBrackets> = {
     qss: LTCG_BRACKETS_2026_JOINT,
     mfs: LTCG_BRACKETS_2026_MFS,
     hoh: LTCG_BRACKETS_2026_HOH,
-};
+} as const;
 
 // 2027 Ordinary Brackets & Standard Deductions (Rev. Proc. 2026-35)
 const BRACKETS_2027_SINGLE: TaxBrackets = [
@@ -142,7 +142,7 @@ const BRACKETS_2027_SINGLE: TaxBrackets = [
     { rate: 0.32, until: 264550 },
     { rate: 0.35, until: 661375 },
     { rate: 0.37, until: Infinity },
-];
+] as const;
 
 const BRACKETS_2027_JOINT: TaxBrackets = [
     { rate: 0.10, until: 25600 },
@@ -152,7 +152,7 @@ const BRACKETS_2027_JOINT: TaxBrackets = [
     { rate: 0.32, until: 529100 },
     { rate: 0.35, until: 793650 },
     { rate: 0.37, until: Infinity },
-];
+] as const;
 
 const BRACKETS_2027_MFS: TaxBrackets = [
     { rate: 0.10, until: 12800 },
@@ -162,7 +162,7 @@ const BRACKETS_2027_MFS: TaxBrackets = [
     { rate: 0.32, until: 264550 },
     { rate: 0.35, until: 396825 },
     { rate: 0.37, until: Infinity },
-];
+] as const;
 
 const BRACKETS_2027_HOH: TaxBrackets = [
     { rate: 0.10, until: 18250 },
@@ -172,7 +172,7 @@ const BRACKETS_2027_HOH: TaxBrackets = [
     { rate: 0.32, until: 264550 },
     { rate: 0.35, until: 661350 },
     { rate: 0.37, until: Infinity },
-];
+] as const;
 
 const BRACKETS_2027: Record<FilingStatus, TaxBrackets> = {
     single: BRACKETS_2027_SINGLE,
@@ -180,7 +180,7 @@ const BRACKETS_2027: Record<FilingStatus, TaxBrackets> = {
     qss: BRACKETS_2027_JOINT,
     mfs: BRACKETS_2027_MFS,
     hoh: BRACKETS_2027_HOH,
-};
+} as const;
 
 const STANDARD_DEDUCTION_2027_SINGLE = 16600;
 const STANDARD_DEDUCTION_2027_JOINT = 33200;
@@ -191,32 +191,32 @@ const STANDARD_DEDUCTION_2027: Record<FilingStatus, number> = {
     qss: STANDARD_DEDUCTION_2027_JOINT,
     mfs: STANDARD_DEDUCTION_2027_SINGLE,
     hoh: 24925,
-};
+} as const;
 
 // 2027 Long-Term Capital Gains Brackets (Rev. Proc. 2026-35 § 3.03)
 const LTCG_BRACKETS_2027_SINGLE: TaxBrackets = [
     { rate: 0.00, until: 51050 },
     { rate: 0.15, until: 563200 },
     { rate: 0.20, until: Infinity },
-];
+] as const;
 
 const LTCG_BRACKETS_2027_JOINT: TaxBrackets = [
     { rate: 0.00, until: 102100 },
     { rate: 0.15, until: 633600 },
     { rate: 0.20, until: Infinity },
-];
+] as const;
 
 const LTCG_BRACKETS_2027_MFS: TaxBrackets = [
     { rate: 0.00, until: 51050 },
     { rate: 0.15, until: 316800 },
     { rate: 0.20, until: Infinity },
-];
+] as const;
 
 const LTCG_BRACKETS_2027_HOH: TaxBrackets = [
     { rate: 0.00, until: 68350 },
     { rate: 0.15, until: 598400 },
     { rate: 0.20, until: Infinity },
-];
+] as const;
 
 const LTCG_BRACKETS_2027: Record<FilingStatus, TaxBrackets> = {
     single: LTCG_BRACKETS_2027_SINGLE,
@@ -224,7 +224,7 @@ const LTCG_BRACKETS_2027: Record<FilingStatus, TaxBrackets> = {
     qss: LTCG_BRACKETS_2027_JOINT,
     mfs: LTCG_BRACKETS_2027_MFS,
     hoh: LTCG_BRACKETS_2027_HOH,
-};
+} as const;
 
 interface YearSharedConfig {
     aotcByStatus: Partial<Record<FilingStatus, AotcRules>>;
@@ -247,7 +247,7 @@ const YEAR_SHARED_CONFIG: Record<FederalTaxYear, YearSharedConfig> = {
         dependentStandardDeduction: { base: 1400, earnedAddOn: 500 },
         kiddieTax: { unearnedIncomeThreshold: 2800, itemizedBase: 1400 },
     },
-};
+} as const;
 
 function buildYearRules(
     year: FederalTaxYear,
@@ -278,4 +278,4 @@ function buildYearRules(
 export const FederalRules: Record<FederalTaxYear, Record<FilingStatus, FederalTaxRules>> = {
     2026: buildYearRules(2026, BRACKETS_2026, STANDARD_DEDUCTION_2026),
     2027: buildYearRules(2027, BRACKETS_2027, STANDARD_DEDUCTION_2027),
-};
+} as const;

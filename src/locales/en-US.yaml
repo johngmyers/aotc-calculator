@@ -32,3 +32,4 @@ filingStatusHoh: Head of Household
 filingStatusMfj: Married Filing Jointly
 filingStatusMfs: Married Filing Separately
 filingStatusQss: Qualifying Surviving Spouse
+aotcDisallowedByFilingStatus: AOTC is disallowed by filing status.
