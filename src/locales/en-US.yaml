@@ -42,3 +42,7 @@ fullTimeStudentLabel: Enrolled as a full-time student for at least one academic 
 halfTimeStudentLabel: Enrolled as a student at least half-time for at least 5 calendar months
 hasLivingParentLabel: At least one parent is living at end of tax year
 earnedMoreThanHalfSupportLabel: Earned income was more than half of their own support
+federalLineKindForm: Form
+federalLineKindSchedule: Schedule
+federalLineReference: "{refKind} {refForm} line {refLine}"
+agiLabel: AGI

@@ -57,4 +57,42 @@ describe("HelpTooltip", () => {
         fireEvent.keyDown(button, {key: "Escape"});
         expect(screen.queryByRole("tooltip")).toBeNull();
     });
+
+    it("formats form line references with localized kind label", () => {
+        const pig = makePigLatinTranslator();
+        const lineRef = {kind: "form" as const, form: "1040", line: "11"};
+
+        render(<HelpTooltip t={pig} lineRef={lineRef}/>);
+        const button = screen.getByRole("button");
+        expect(button).toHaveAccessibleName(pig("helpTooltipDefaultTriggerLabel"));
+
+        fireEvent.focus(button);
+        const tooltip = screen.getByRole("tooltip");
+        const expectedText = pig("federalLineReference", {
+            refKind: pig("federalLineKindForm"),
+            refForm: "1040",
+            refLine: "11",
+        });
+        expect(tooltip).toHaveTextContent(expectedText);
+    });
+
+    it("formats schedule line references with localized kind label and closes on Escape", () => {
+        const pig = makePigLatinTranslator();
+        const lineRef = {kind: "schedule" as const, form: "1", line: "11"};
+
+        render(<HelpTooltip t={pig} lineRef={lineRef}/>);
+        const button = screen.getByRole("button");
+
+        fireEvent.mouseEnter(button);
+        const tooltip = screen.getByRole("tooltip");
+        const expectedText = pig("federalLineReference", {
+            refKind: pig("federalLineKindSchedule"),
+            refForm: "1",
+            refLine: "11",
+        });
+        expect(tooltip).toHaveTextContent(expectedText);
+
+        fireEvent.keyDown(button, {key: "Escape"});
+        expect(screen.queryByRole("tooltip")).toBeNull();
+    });
 });

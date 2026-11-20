@@ -4,6 +4,8 @@ import {HelpTooltip} from "./HelpTooltip.js";
 import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
 import {wrapNodes} from "./wrapNodes.js";
 import {SubjectToKiddieTax} from "./SubjectToKiddieTax.js";
+import {getFederalLineRevision} from "../rules/federalLines.js";
+import {IntegerInput} from "./IntegerInput.js";
 
 const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
@@ -45,12 +47,14 @@ export function AotcDependentCalculator({
     })();
     const taxYearSelectId = useId();
     const [taxYear, setTaxYear] = useState<number>(defaultTaxYear);
+    const federalLineRevision = getFederalLineRevision(taxYear as FederalTaxYear)
 
     const claimantHeadingId = useId();
     const claimantFilingStatusSelectId = useId();
     const [claimantFilingStatus, setClaimantFilingStatus] = useState<FilingStatus>("mfj");
-    const claimantRefundableIneligibleId = useId();
     const [claimantRefundableIneligible, setClaimantRefundableIneligible] = useState<boolean>(false);
+    const claimantAgiId = useId();
+    const [claimantAgi, setClaimantAgi] = useState<number | undefined>(undefined)
 
     return wrapNodes("main", {className: "aotc-dependent-calculator"}, () => {
         let ignoreRest = false;
@@ -146,6 +150,21 @@ export function AotcDependentCalculator({
                     hidden={ignoreRest}
                     onChange={setClaimantRefundableIneligible}
                 />,
+                <div key="claimant-agi" hidden={ignoreRest}>
+                    <label htmlFor={claimantAgiId}>{t("agiLabel")}</label>
+                    <span className="required-indicator" aria-hidden="true">*</span>
+                    {" "}
+                    <IntegerInput
+                        id={claimantAgiId}
+                        value={claimantAgi}
+                        onValueChange={setClaimantAgi}
+                    />
+                    {" "}
+                    <HelpTooltip
+                        t={t}
+                        lineRef={federalLineRevision.agi}
+                    />
+                </div>
             );
 
             return claimantSectionItems;

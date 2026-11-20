@@ -7,7 +7,8 @@ import {
 } from "../../src/ui/i18n.js";
 
 function toPigLatinWord(word: string): string {
-    if (/^[A-Z0-9/-]+$/.test(word)) return word;
+    if (/^[0-9/-]+$/.test(word)) return word;
+    if (/^[A-Z]{2,}$/.test(word)) return `${word}-ay`;
     const match = word.match(/^([^A-Za-z]*)([A-Za-z]+)(.*)$/);
     if (!match) return word;
 

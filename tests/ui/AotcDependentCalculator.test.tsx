@@ -3,7 +3,8 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {createTranslator, EN_US_BUNDLE, type MessageBundle,} from "../../src/ui/i18n.js";
 import {AotcDependentCalculator} from "../../src/ui/AotcDependentCalculator.js";
 import {makePigLatinTranslator} from "./pigLatin.js";
-import {FederalRules} from "../../src/rules/federal.js";
+import {FederalRules, FederalTaxYear} from "../../src/rules/federal.js";
+import {getFederalLineRevision} from "../../src/rules/federalLines.js";
 
 afterEach(() => {
     cleanup();
@@ -291,5 +292,81 @@ describe("Claimant section", () => {
         const statusNotice = within(claimantRegion).getByRole("status");
         expect(statusNotice).toHaveTextContent(/⚠/);
         expect(statusNotice).toHaveTextContent(pig("aotcDisallowedByFilingStatus"));
+    });
+
+    it("renders AGI input, label, and line tooltip inside Claimant section", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        }) as HTMLInputElement;
+
+        expect(agiInput).toBeInTheDocument();
+        expect(agiInput.value).toBe("");
+
+        const tooltipTrigger = within(claimantRegion).getByRole("button", {
+            name: EN_US_BUNDLE.agiTooltipLabel ?? EN_US_BUNDLE.helpTooltipDefaultTriggerLabel,
+        });
+        fireEvent.focus(tooltipTrigger);
+
+        const tooltip = screen.getByRole("tooltip");
+        const agiRef = getFederalLineRevision(2026).agi;
+        expect(tooltip).toHaveTextContent(
+            new RegExp(`${agiRef.form}.*${agiRef.line}`, "i"),
+        );
+    });
+
+    it("formats claimant AGI with commas and preserves it across filing status changes", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        }) as HTMLInputElement;
+        const filingStatusSelect = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        }) as HTMLSelectElement;
+
+        fireEvent.change(agiInput, {target: {value: "85000"}});
+        expect(agiInput.value).toBe("85,000");
+
+        fireEvent.change(filingStatusSelect, {target: {value: "mfs"}});
+        expect(agiInput.value).toBe("85,000");
+
+        fireEvent.change(filingStatusSelect, {target: {value: "mfj"}});
+        expect(agiInput.value).toBe("85,000");
+    });
+
+    it("updates claimant AGI tooltip line when tax year changes", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const yearSelect = screen.getByRole("combobox", {
+            name: EN_US_BUNDLE.taxYearLabel,
+        }) as HTMLSelectElement;
+        const nextYear = expectedYears.find((y) => y !== Number(yearSelect.value));
+
+        if (nextYear !== undefined) {
+            fireEvent.change(yearSelect, {target: {value: String(nextYear)}});
+        }
+
+        const activeYear = Number(yearSelect.value);
+        const expectedRef = getFederalLineRevision(activeYear as FederalTaxYear).agi;
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const tooltipTrigger = within(claimantRegion).getByRole("button", {
+            name: EN_US_BUNDLE.agiTooltipLabel ?? EN_US_BUNDLE.helpTooltipDefaultTriggerLabel,
+        });
+
+        fireEvent.focus(tooltipTrigger);
+        const tooltip = screen.getByRole("tooltip");
+        expect(tooltip).toHaveTextContent(
+            new RegExp(`${expectedRef.form}.*${expectedRef.line}`, "i"),
+        );
     });
 });
