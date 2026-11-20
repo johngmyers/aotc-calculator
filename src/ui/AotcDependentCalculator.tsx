@@ -3,6 +3,7 @@ import {getTranslator, Translator} from "./i18n.js";
 import {HelpTooltip} from "./HelpTooltip.js";
 import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
 import {wrapNodes} from "./wrapNodes.js";
+import {SubjectToKiddieTax} from "./SubjectToKiddieTax.js";
 
 const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
@@ -48,6 +49,8 @@ export function AotcDependentCalculator({
     const claimantHeadingId = useId();
     const claimantFilingStatusSelectId = useId();
     const [claimantFilingStatus, setClaimantFilingStatus] = useState<FilingStatus>("mfj");
+    const claimantRefundableIneligibleId = useId();
+    const [claimantRefundableIneligible, setClaimantRefundableIneligible] = useState<boolean>(false);
 
     return wrapNodes("main", {className: "aotc-dependent-calculator"}, () => {
         let ignoreRest = false;
@@ -132,6 +135,18 @@ export function AotcDependentCalculator({
                 );
                 ignoreRest = true;
             }
+
+            claimantSectionItems.push(
+                <SubjectToKiddieTax
+                    key="claimant-refundable-ineligible"
+                    t={t}
+                    filingStatus={claimantFilingStatus}
+                    defaultAgeBracket="24OrOlder"
+                    requireFullTimeStudent
+                    hidden={ignoreRest}
+                    onChange={setClaimantRefundableIneligible}
+                />,
+            );
 
             return claimantSectionItems;
         }));

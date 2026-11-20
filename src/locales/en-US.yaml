@@ -33,3 +33,12 @@ filingStatusMfj: Married Filing Jointly
 filingStatusMfs: Married Filing Separately
 filingStatusQss: Qualifying Surviving Spouse
 aotcDisallowedByFilingStatus: AOTC is disallowed by filing status.
+ageLabel: "Age at end of tax year"
+ageBracketUnder18: "0-17"
+ageBracket18: "18"
+ageBracket19to23: "19-23"
+ageBracket24OrOlder: "24 or older"
+fullTimeStudentLabel: Enrolled as a full-time student for at least one academic period beginning in the tax year
+halfTimeStudentLabel: Enrolled as a student at least half-time for at least 5 calendar months
+hasLivingParentLabel: At least one parent is living at end of tax year
+earnedMoreThanHalfSupportLabel: Earned income was more than half of their own support
