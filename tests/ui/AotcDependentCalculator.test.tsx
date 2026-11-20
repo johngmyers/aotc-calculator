@@ -80,7 +80,7 @@ describe("AotcDependentCalculator", () => {
         const triggerLabel =
             pig.try("stayWithinVitaScopeTooltipLabel") ??
             pig("helpTooltipDefaultTriggerLabel");
-        const button = within(region).getByRole("button", {name: triggerLabel});
+        const button = getTooltipButtonForInput(region, checkbox, triggerLabel);
 
         expect(screen.queryByRole("tooltip")).toBeNull();
 
@@ -307,9 +307,9 @@ describe("Claimant section", () => {
         expect(agiInput).toBeInTheDocument();
         expect(agiInput.value).toBe("");
 
-        const tooltipTrigger = within(claimantRegion).getByRole("button", {
-            name: EN_US_BUNDLE.agiTooltipLabel ?? EN_US_BUNDLE.helpTooltipDefaultTriggerLabel,
-        });
+        const triggerLabel =
+            EN_US_BUNDLE.agiTooltipLabel ?? EN_US_BUNDLE.helpTooltipDefaultTriggerLabel;
+        const tooltipTrigger = getTooltipButtonForInput(claimantRegion, agiInput, triggerLabel);
         fireEvent.focus(tooltipTrigger);
 
         const tooltip = screen.getByRole("tooltip");
@@ -359,9 +359,12 @@ describe("Claimant section", () => {
         const claimantRegion = screen.getByRole("region", {
             name: EN_US_BUNDLE.claimantSectionTitle,
         });
-        const tooltipTrigger = within(claimantRegion).getByRole("button", {
-            name: EN_US_BUNDLE.agiTooltipLabel ?? EN_US_BUNDLE.helpTooltipDefaultTriggerLabel,
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
         });
+        const triggerLabel =
+            EN_US_BUNDLE.agiTooltipLabel ?? EN_US_BUNDLE.helpTooltipDefaultTriggerLabel;
+        const tooltipTrigger = getTooltipButtonForInput(claimantRegion, agiInput, triggerLabel);
 
         fireEvent.focus(tooltipTrigger);
         const tooltip = screen.getByRole("tooltip");
@@ -369,4 +372,313 @@ describe("Claimant section", () => {
             new RegExp(`${expectedRef.form}.*${expectedRef.line}`, "i"),
         );
     });
+
+    it("renders required asterisks on AGI and tax before nonrefundable credits", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const asterisks = claimantRegion.querySelectorAll(".required-indicator");
+        expect(asterisks).toHaveLength(2);
+        asterisks.forEach((el) => {
+            expect(el).toHaveAttribute("aria-hidden", "true");
+            expect(el).toHaveTextContent("*");
+        });
+
+        const agiRow = within(claimantRegion)
+            .getByRole("textbox", {name: EN_US_BUNDLE.agiLabel})
+            .closest("div")!;
+        const taxRow = within(claimantRegion)
+            .getByRole("textbox", {name: EN_US_BUNDLE.taxBeforeNonrefundableCreditsLabel})
+            .closest("div")!;
+        const creditsRow = within(claimantRegion)
+            .getByRole("textbox", {name: EN_US_BUNDLE.nonrefundableCreditsLabel})
+            .closest("div")!;
+
+        expect(agiRow.querySelector(".required-indicator")).not.toBeNull();
+        expect(taxRow.querySelector(".required-indicator")).not.toBeNull();
+        expect(creditsRow.querySelector(".required-indicator")).toBeNull();
+    });
+
+    it("hides everything after the disallowed notice when filing status disallows AOTC", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const filingStatusSelect = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        }) as HTMLSelectElement;
+
+        fireEvent.change(filingStatusSelect, {target: {value: "mfs"}});
+
+        const statusNotice = within(claimantRegion).getByRole("status");
+        const allElements = Array.from(claimantRegion.querySelectorAll<HTMLElement>("*"));
+        const noticeIndex = allElements.indexOf(statusNotice);
+        expect(noticeIndex).toBeGreaterThan(-1);
+
+        const elementsAfterNotice = allElements
+            .slice(noticeIndex + 1)
+            .filter((el) => !statusNotice.contains(el));
+
+        expect(elementsAfterNotice.length).toBeGreaterThan(0);
+
+        const unhidden = elementsAfterNotice
+            .filter((el) => el.closest("[hidden]") === null)
+            .map((el) => {
+                const text = (el.textContent ?? "").trim().slice(0, 40);
+                const idPart = el.id ? `#${el.id}` : "";
+                const classPart = el.className ? `.${String(el.className).trim().split(/\s+/).join(".")}` : "";
+                return `<${el.tagName.toLowerCase()}${idPart}${classPart}> (${JSON.stringify(text)})`;
+            });
+
+        expect(unhidden, `Unhidden elements after disallowed notice:\n${unhidden.join("\n")}`).toEqual([]);
+    });
+
+    it("validates required AGI on blur and clears on entry", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        }) as HTMLInputElement;
+
+        fireEvent.blur(agiInput);
+        expect(agiInput).toHaveAttribute("aria-invalid", "true");
+        expect(within(claimantRegion).getByRole("alert")).toHaveTextContent(
+            EN_US_BUNDLE.valueIsRequired,
+        );
+
+        fireEvent.change(agiInput, {target: {value: "50000"}});
+        expect(agiInput).not.toHaveAttribute("aria-invalid", "true");
+        expect(within(claimantRegion).queryByRole("alert")).toBeNull();
+    });
+
+    it("renders tax before nonrefundable credits input and line tooltip inside Claimant section", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const taxInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.taxBeforeNonrefundableCreditsLabel,
+        }) as HTMLInputElement;
+
+        expect(taxInput).toBeInTheDocument();
+        expect(taxInput.value).toBe("");
+
+        const triggerLabel =
+            EN_US_BUNDLE.taxBeforeNonrefundableCreditsTooltipLabel ??
+            EN_US_BUNDLE.helpTooltipDefaultTriggerLabel;
+        const tooltipTrigger = getTooltipButtonForInput(claimantRegion, taxInput, triggerLabel);
+        fireEvent.focus(tooltipTrigger);
+
+        const tooltip = screen.getByRole("tooltip");
+        const taxRef = getFederalLineRevision(2026).taxBeforeNonrefundableCredits;
+        expect(tooltip).toHaveTextContent(
+            new RegExp(`${taxRef.form}.*${taxRef.line}`, "i"),
+        );
+    });
+
+    it("formats tax before nonrefundable credits with commas and preserves it across filing status changes", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const taxInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.taxBeforeNonrefundableCreditsLabel,
+        }) as HTMLInputElement;
+        const filingStatusSelect = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        }) as HTMLSelectElement;
+
+        fireEvent.change(taxInput, {target: {value: "12500"}});
+        expect(taxInput.value).toBe("12,500");
+
+        fireEvent.change(filingStatusSelect, {target: {value: "mfs"}});
+        expect(taxInput.value).toBe("12,500");
+
+        fireEvent.change(filingStatusSelect, {target: {value: "mfj"}});
+        expect(taxInput.value).toBe("12,500");
+    });
+
+    it("updates tax before nonrefundable credits tooltip line when tax year changes", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const yearSelect = screen.getByRole("combobox", {
+            name: EN_US_BUNDLE.taxYearLabel,
+        }) as HTMLSelectElement;
+        const nextYear = expectedYears.find((y) => y !== Number(yearSelect.value));
+
+        if (nextYear !== undefined) {
+            fireEvent.change(yearSelect, {target: {value: String(nextYear)}});
+        }
+
+        const activeYear = Number(yearSelect.value);
+        const expectedRef = getFederalLineRevision(activeYear as FederalTaxYear)
+            .taxBeforeNonrefundableCredits;
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const taxInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.taxBeforeNonrefundableCreditsLabel,
+        });
+        const triggerLabel =
+            EN_US_BUNDLE.taxBeforeNonrefundableCreditsTooltipLabel ??
+            EN_US_BUNDLE.helpTooltipDefaultTriggerLabel;
+        const tooltipTrigger = getTooltipButtonForInput(claimantRegion, taxInput, triggerLabel);
+
+        fireEvent.focus(tooltipTrigger);
+        const tooltip = screen.getByRole("tooltip");
+        expect(tooltip).toHaveTextContent(
+            new RegExp(`${expectedRef.form}.*${expectedRef.line}`, "i"),
+        );
+    });
+
+    it("validates required tax before nonrefundable credits on blur and clears on entry", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const taxInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.taxBeforeNonrefundableCreditsLabel,
+        }) as HTMLInputElement;
+
+        fireEvent.blur(taxInput);
+        expect(taxInput).toHaveAttribute("aria-invalid", "true");
+        expect(within(claimantRegion).getByRole("alert")).toHaveTextContent(
+            EN_US_BUNDLE.valueIsRequired,
+        );
+
+        fireEvent.change(taxInput, {target: {value: "8000"}});
+        expect(taxInput).not.toHaveAttribute("aria-invalid", "true");
+        expect(within(claimantRegion).queryByRole("alert")).toBeNull();
+    });
+
+    it("renders nonrefundable credits input and line tooltip inside Claimant section", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const creditsInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.nonrefundableCreditsLabel,
+        }) as HTMLInputElement;
+
+        expect(creditsInput).toBeInTheDocument();
+        expect(creditsInput.value).toBe("");
+
+        const triggerLabel =
+            EN_US_BUNDLE.nonrefundableCreditsTooltipLabel ??
+            EN_US_BUNDLE.helpTooltipDefaultTriggerLabel;
+        const tooltipTrigger = getTooltipButtonForInput(claimantRegion, creditsInput, triggerLabel);
+        fireEvent.focus(tooltipTrigger);
+
+        const tooltip = screen.getByRole("tooltip");
+        const creditsRef = getFederalLineRevision(2026).nonrefundableCredits;
+        expect(tooltip).toHaveTextContent(
+            new RegExp(`${creditsRef.form}.*${creditsRef.line}`, "i"),
+        );
+    });
+
+    it("formats nonrefundable credits with commas and preserves it across filing status changes", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const creditsInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.nonrefundableCreditsLabel,
+        }) as HTMLInputElement;
+        const filingStatusSelect = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        }) as HTMLSelectElement;
+
+        fireEvent.change(creditsInput, {target: {value: "4200"}});
+        expect(creditsInput.value).toBe("4,200");
+
+        fireEvent.change(filingStatusSelect, {target: {value: "mfs"}});
+        expect(creditsInput.value).toBe("4,200");
+
+        fireEvent.change(filingStatusSelect, {target: {value: "mfj"}});
+        expect(creditsInput.value).toBe("4,200");
+    });
+
+    it("updates nonrefundable credits tooltip line when tax year changes", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const yearSelect = screen.getByRole("combobox", {
+            name: EN_US_BUNDLE.taxYearLabel,
+        }) as HTMLSelectElement;
+        const nextYear = expectedYears.find((y) => y !== Number(yearSelect.value));
+
+        if (nextYear !== undefined) {
+            fireEvent.change(yearSelect, {target: {value: String(nextYear)}});
+        }
+
+        const activeYear = Number(yearSelect.value);
+        const expectedRef = getFederalLineRevision(activeYear as FederalTaxYear)
+            .nonrefundableCredits;
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const creditsInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.nonrefundableCreditsLabel,
+        });
+        const triggerLabel =
+            EN_US_BUNDLE.nonrefundableCreditsTooltipLabel ??
+            EN_US_BUNDLE.helpTooltipDefaultTriggerLabel;
+        const tooltipTrigger = getTooltipButtonForInput(claimantRegion, creditsInput, triggerLabel);
+
+        fireEvent.focus(tooltipTrigger);
+        const tooltip = screen.getByRole("tooltip");
+        expect(tooltip).toHaveTextContent(
+            new RegExp(`${expectedRef.form}.*${expectedRef.line}`, "i"),
+        );
+    });
+
+    it("allows nonrefundable credits to remain empty on blur without required error", () => {
+        render(<AotcDependentCalculator/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const creditsInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.nonrefundableCreditsLabel,
+        }) as HTMLInputElement;
+
+        fireEvent.blur(creditsInput);
+        expect(creditsInput).not.toHaveAttribute("aria-invalid", "true");
+        expect(within(claimantRegion).queryByRole("alert")).toBeNull();
+    });
 });
+
+function getTooltipButtonForInput(
+    root: HTMLElement,
+    input: HTMLElement,
+    triggerName: string = EN_US_BUNDLE.helpTooltipDefaultTriggerLabel,
+): HTMLElement {
+    const containerDiv = input.closest("div");
+    if (!containerDiv) {
+        throw new Error("Input is not inside a div");
+    }
+
+    const matchingButtons = new Set(within(root).queryAllByRole("button", {name: triggerName}));
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    walker.currentNode = input;
+
+    let current = walker.nextNode() as HTMLElement | null;
+    while (current && containerDiv.contains(current)) {
+        if (current.tagName === "BUTTON" && matchingButtons.has(current)) {
+            return current;
+        }
+        current = walker.nextNode() as HTMLElement | null;
+    }
+
+    throw new Error(`Missing tooltip button "${triggerName}" within surrounding div`);
+}

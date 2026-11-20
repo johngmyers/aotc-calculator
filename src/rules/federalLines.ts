@@ -3,20 +3,22 @@ import {FederalTaxYear} from "./federal.js";
 export type FederalLineKind = "form" | "schedule";
 
 export interface FormLineRef {
-    kind: FederalLineKind;
-    form: string;
-    line: string;
+    kind: FederalLineKind
+    form: string
+    line: string
 }
 
 export interface FederalLineRevision {
-    agi: FormLineRef;
-    taxableIncome: FormLineRef;
+    agi: FormLineRef
+    taxBeforeNonrefundableCredits: FormLineRef
+    nonrefundableCredits: FormLineRef
 }
 
 export const FEDERAL_LINE_REVISIONS: Record<number, FederalLineRevision> = {
     2026: {
         agi: {kind: "form", form: "1040", line: "11"},
-        taxableIncome: {kind: "form", form: "1040", line: "15"},
+        taxBeforeNonrefundableCredits: {kind: "form", form: "1040", line: "18"},
+        nonrefundableCredits: {kind: "form", form: "1040", line: "21"},
     },
     // Example if AGI moves to a schedule in a later revision:
     // 2027: {

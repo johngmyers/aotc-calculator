@@ -54,7 +54,11 @@ export function AotcDependentCalculator({
     const [claimantFilingStatus, setClaimantFilingStatus] = useState<FilingStatus>("mfj");
     const [claimantRefundableIneligible, setClaimantRefundableIneligible] = useState<boolean>(false);
     const claimantAgiId = useId();
-    const [claimantAgi, setClaimantAgi] = useState<number | undefined>(undefined)
+    const [claimantAgi, setClaimantAgi] = useState<number | undefined>(undefined);
+    const claimantTaxBeforeNonrefundableCreditsId = useId();
+    const [claimantTaxBeforeNonrefundableCredits, setClaimantTaxBeforeNonrefundableCredits] = useState<number | undefined>(undefined);
+    const claimantNonrefundableCreditsId = useId();
+    const [claimantNonrefundableCredits, setClaimantNonrefundableCredits] = useState<number | undefined>(undefined);
 
     return wrapNodes("main", {className: "aotc-dependent-calculator"}, () => {
         let ignoreRest = false;
@@ -165,7 +169,38 @@ export function AotcDependentCalculator({
                         t={t}
                         lineRef={federalLineRevision.agi}
                     />
-                </div>
+                </div>,
+                <div key="claimant-tax" hidden={ignoreRest}>
+                    <label
+                        htmlFor={claimantTaxBeforeNonrefundableCreditsId}>{t("taxBeforeNonrefundableCreditsLabel")}</label>
+                    <span className="required-indicator" aria-hidden="true">*</span>
+                    {" "}
+                    <IntegerInput
+                        id={claimantTaxBeforeNonrefundableCreditsId}
+                        value={claimantTaxBeforeNonrefundableCredits}
+                        onValueChange={setClaimantTaxBeforeNonrefundableCredits}
+                        validator={valueRequired}
+                    />
+                    {" "}
+                    <HelpTooltip
+                        t={t}
+                        lineRef={federalLineRevision.taxBeforeNonrefundableCredits}
+                    />
+                </div>,
+                <div key="claimant-credits" hidden={ignoreRest}>
+                    <label htmlFor={claimantNonrefundableCreditsId}>{t("nonrefundableCreditsLabel")}</label>
+                    {" "}
+                    <IntegerInput
+                        id={claimantNonrefundableCreditsId}
+                        value={claimantNonrefundableCredits}
+                        onValueChange={setClaimantNonrefundableCredits}
+                    />
+                    {" "}
+                    <HelpTooltip
+                        t={t}
+                        lineRef={federalLineRevision.nonrefundableCredits}
+                    />
+                </div>,
             );
 
             return claimantSectionItems;

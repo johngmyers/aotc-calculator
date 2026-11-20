@@ -47,3 +47,5 @@ federalLineKindSchedule: Schedule
 federalLineReference: "{refKind} {refForm} line {refLine}"
 agiLabel: AGI
 valueIsRequired: Value is required
+taxBeforeNonrefundableCreditsLabel: Tax before nonrefundable credits
+nonrefundableCreditsLabel: Nonrefundable credits (other than AOTC)
