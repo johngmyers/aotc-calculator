@@ -46,3 +46,4 @@ federalLineKindForm: Form
 federalLineKindSchedule: Schedule
 federalLineReference: "{refKind} {refForm} line {refLine}"
 agiLabel: AGI
+valueIsRequired: Value is required

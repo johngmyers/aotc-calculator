@@ -5,7 +5,7 @@ import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
 import {wrapNodes} from "./wrapNodes.js";
 import {SubjectToKiddieTax} from "./SubjectToKiddieTax.js";
 import {getFederalLineRevision} from "../rules/federalLines.js";
-import {IntegerInput} from "./IntegerInput.js";
+import {IntegerInput, valueRequired} from "./IntegerInput.js";
 
 const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
@@ -158,6 +158,7 @@ export function AotcDependentCalculator({
                         id={claimantAgiId}
                         value={claimantAgi}
                         onValueChange={setClaimantAgi}
+                        validator={valueRequired}
                     />
                     {" "}
                     <HelpTooltip
