@@ -49,3 +49,5 @@ agiLabel: AGI
 valueIsRequired: Value is required
 taxBeforeNonrefundableCreditsLabel: Tax before nonrefundable credits
 nonrefundableCreditsLabel: Nonrefundable credits (other than AOTC)
+resultsSectionTitle: Results
+noAotcBenefitSummary: Claimant gets no benefit from AOTC, regardless of qualified education expenses.

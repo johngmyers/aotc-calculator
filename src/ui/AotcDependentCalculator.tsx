@@ -6,6 +6,7 @@ import {wrapNodes} from "./wrapNodes.js";
 import {SubjectToKiddieTax} from "./SubjectToKiddieTax.js";
 import {getFederalLineRevision} from "../rules/federalLines.js";
 import {IntegerInput, valueRequired} from "./IntegerInput.js";
+import {calculateAotc} from "../calc/calculateAotc.js";
 
 const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
@@ -59,6 +60,8 @@ export function AotcDependentCalculator({
     const [claimantTaxBeforeNonrefundableCredits, setClaimantTaxBeforeNonrefundableCredits] = useState<number | undefined>(undefined);
     const claimantNonrefundableCreditsId = useId();
     const [claimantNonrefundableCredits, setClaimantNonrefundableCredits] = useState<number | undefined>(undefined);
+
+    const resultsNoClaimantBenefitHeadingId = useId();
 
     return wrapNodes("main", {className: "aotc-dependent-calculator"}, () => {
         let ignoreRest = false;
@@ -205,6 +208,44 @@ export function AotcDependentCalculator({
 
             return claimantSectionItems;
         }));
+
+        // Check if AOTC benefits claimant at all
+        if (!ignoreRest) {
+            const creditsBeforeAotc = claimantNonrefundableCredits ?? 0;
+            const effectiveTbnc =
+                claimantTaxBeforeNonrefundableCredits ?? creditsBeforeAotc + 1000;
+
+            const aotcResult = calculateAotc(claimantTaxRules, {
+                agi: claimantAgi ?? 0,
+                refundableIneligible: claimantRefundableIneligible,
+                students: [{qualifiedExpenses: 100_000}],
+            });
+
+            if (
+                aotcResult.refundableCredit === 0 &&
+                (aotcResult.nonrefundableCredit === 0 ||
+                    creditsBeforeAotc >= effectiveTbnc)
+            ) {
+                ignoreRest = true;
+                sections.push(
+                    <hr key="hr-results-no-claimant-benefit"/>,
+                    <section
+                        key="results-no-claimant-benefit"
+                        aria-labelledby={resultsNoClaimantBenefitHeadingId}
+                    >
+                        <h2
+                            key="results-no-claimant-benefit-header"
+                            id={resultsNoClaimantBenefitHeadingId}
+                        >
+                            <center>{t("resultsSectionTitle")}</center>
+                        </h2>
+                        <div key="results-no-claimant-benefit-summary" role="status">
+                            {t("noAotcBenefitSummary")}
+                        </div>
+                    </section>,
+                );
+            }
+        }
 
         return sections;
     });

@@ -658,6 +658,220 @@ describe("Claimant section", () => {
     });
 });
 
+describe("Early results when AOTC provides no benefit to claimant", () => {
+    it("does not show early results before AGI is entered", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const tbncInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.taxBeforeNonrefundableCreditsLabel,
+        });
+        const creditsInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.nonrefundableCreditsLabel,
+        });
+
+        fireEvent.change(tbncInput, {target: {value: "5000"}});
+        fireEvent.change(creditsInput, {target: {value: "1000"}});
+
+        expect(
+            screen.queryByRole("region", {name: EN_US_BUNDLE.resultsSectionTitle}),
+        ).toBeNull();
+    });
+
+    it("publishes early Results when AGI phases out AOTC completely even before TBNC is entered", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        });
+
+        fireEvent.change(agiInput, {target: {value: "200000"}});
+
+        const resultsRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.resultsSectionTitle,
+        });
+        expect(resultsRegion).toBeInTheDocument();
+        expect(
+            within(resultsRegion).getByRole("heading", {
+                level: 2,
+                name: EN_US_BUNDLE.resultsSectionTitle,
+            }),
+        ).toBeInTheDocument();
+        expect(within(resultsRegion).getByRole("status")).toHaveTextContent(
+            EN_US_BUNDLE.noAotcBenefitSummary,
+        );
+    });
+
+    it("publishes early Results when AGI phases out AOTC and NC is entered while TBNC is omitted", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        });
+        const creditsInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.nonrefundableCreditsLabel,
+        });
+
+        fireEvent.change(agiInput, {target: {value: "200000"}});
+        fireEvent.change(creditsInput, {target: {value: "2500"}});
+
+        const resultsRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.resultsSectionTitle,
+        });
+        expect(resultsRegion).toBeInTheDocument();
+        expect(within(resultsRegion).getByRole("status")).toHaveTextContent(
+            EN_US_BUNDLE.noAotcBenefitSummary,
+        );
+    });
+
+    it("does not publish early Results from defaulted TBNC when AGI is in-range and TBNC is omitted", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        });
+
+        fireEvent.change(agiInput, {target: {value: "50000"}});
+
+        expect(
+            screen.queryByRole("region", {name: EN_US_BUNDLE.resultsSectionTitle}),
+        ).toBeNull();
+    });
+
+    it("publishes early Results when claimant is refundable-ineligible and nonrefundable credits already equal or exceed TBNC", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const filingStatusSelect = within(claimantRegion).getByRole("combobox", {
+            name: EN_US_BUNDLE.filingStatusLabel,
+        });
+        fireEvent.change(filingStatusSelect, {target: {value: "single"}});
+
+        const under18Radio = within(claimantRegion).getByRole("radio", {
+            name: /0-17/i,
+        });
+        fireEvent.click(under18Radio);
+
+        const tbncInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.taxBeforeNonrefundableCreditsLabel,
+        });
+        const creditsInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.nonrefundableCreditsLabel,
+        });
+
+        fireEvent.change(tbncInput, {target: {value: "3000"}});
+        fireEvent.change(creditsInput, {target: {value: "3000"}});
+
+        const resultsRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.resultsSectionTitle,
+        });
+        expect(resultsRegion).toBeInTheDocument();
+        expect(within(resultsRegion).getByRole("status")).toHaveTextContent(
+            EN_US_BUNDLE.noAotcBenefitSummary,
+        );
+    });
+
+    it("does not publish early Results when TBNC exceeds nonrefundable credits and AOTC can still help", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        });
+        const tbncInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.taxBeforeNonrefundableCreditsLabel,
+        });
+        const creditsInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.nonrefundableCreditsLabel,
+        });
+
+        fireEvent.change(agiInput, {target: {value: "50000"}});
+        fireEvent.change(tbncInput, {target: {value: "5000"}});
+        fireEvent.change(creditsInput, {target: {value: "1000"}});
+
+        expect(
+            screen.queryByRole("region", {name: EN_US_BUNDLE.resultsSectionTitle}),
+        ).toBeNull();
+    });
+
+    it("hides everything after the early Results section in DOM order", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        });
+
+        fireEvent.change(agiInput, {target: {value: "200000"}});
+
+        const resultsRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.resultsSectionTitle,
+        });
+        const main = screen.getByRole("main");
+        const allElements = Array.from(main.querySelectorAll<HTMLElement>("*"));
+        const resultsIndex = allElements.indexOf(resultsRegion);
+        expect(resultsIndex).toBeGreaterThan(-1);
+
+        const elementsAfterResults = allElements
+            .slice(resultsIndex + 1)
+            .filter((el) => !resultsRegion.contains(el));
+
+        const unhidden = elementsAfterResults
+            .filter((el) => el.closest("[hidden]") === null)
+            .map((el) => {
+                const text = (el.textContent ?? "").trim().slice(0, 40);
+                const idPart = el.id ? `#${el.id}` : "";
+                const classPart = el.className
+                    ? `.${String(el.className).trim().split(/\s+/).join(".")}`
+                    : "";
+                return `<${el.tagName.toLowerCase()}${idPart}${classPart}> (${JSON.stringify(text)})`;
+            });
+
+        expect(
+            unhidden,
+            `Unhidden elements after early Results section:\n${unhidden.join("\n")}`,
+        ).toEqual([]);
+    });
+
+    it("retracts early Results when AGI is lowered back into eligible range", () => {
+        render(<AotcDependentCalculator now={new Date(2026, 10, 18)}/>);
+
+        const claimantRegion = screen.getByRole("region", {
+            name: EN_US_BUNDLE.claimantSectionTitle,
+        });
+        const agiInput = within(claimantRegion).getByRole("textbox", {
+            name: EN_US_BUNDLE.agiLabel,
+        });
+
+        fireEvent.change(agiInput, {target: {value: "200000"}});
+        expect(
+            screen.getByRole("region", {name: EN_US_BUNDLE.resultsSectionTitle}),
+        ).toBeInTheDocument();
+
+        fireEvent.change(agiInput, {target: {value: "50000"}});
+        expect(
+            screen.queryByRole("region", {name: EN_US_BUNDLE.resultsSectionTitle}),
+        ).toBeNull();
+    });
+});
+
 function getTooltipButtonForInput(
     root: HTMLElement,
     input: HTMLElement,
