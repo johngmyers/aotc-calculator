@@ -1,5 +1,8 @@
-import {useEffect, useId, useState} from "react";
+import {ReactNode, useEffect, useId, useState} from "react";
 import {Translator} from "./i18n.js";
+import {wrapNodes} from "./wrapNodes.js";
+import {FilingStatus} from "../rules/federal.js";
+import {FILING_STATUS_LABEL_KEYS, FILING_STATUS_ORDER} from "./AotcDependentCalculator.js";
 
 export interface StudentSectionProps {
     studentNumber: number
@@ -26,25 +29,47 @@ export function StudentSection({
     const headingId = useId();
     const nameInputId = useId();
     const [rawName, setRawName] = useState("");
+    const filingStatusSelectId = useId();
+    const [filingStatus, setFilingStatus] = useState<FilingStatus>("single");
 
     useEffect(() => {
         onNameChange(getEffectiveStudentName(rawName, studentNumber, t));
     }, [onNameChange, rawName, studentNumber, t]);
 
-    return (
-        <section aria-labelledby={headingId} hidden={hidden}>
-            <h2 id={headingId}>
+    return wrapNodes(
+        "section",
+        {
+            key: `student-${studentNumber}`,
+            "aria-labelledby": headingId,
+            hidden,
+        },
+        (): ReactNode[] => [
+            <h2 key="heading" id={headingId}>
                 <center>{t("studentSectionTitle", {number: studentNumber})}</center>
-            </h2>
-            <div>
+            </h2>,
+            <div key="name-field">
                 <label htmlFor={nameInputId}>{t("studentNameLabel")}</label>{" "}
                 <input
                     id={nameInputId}
                     type="text"
                     value={rawName}
-                    hidden={hidden}
-                    onChange={(e) => setRawName(e.target.value)}/>
-            </div>
-        </section>
+                    onChange={(e) => setRawName(e.target.value)}
+                />
+            </div>,
+            <div key="filing-status">
+                <label htmlFor={filingStatusSelectId}>{t("filingStatusLabel")}</label>{" "}
+                <select
+                    id={filingStatusSelectId}
+                    value={filingStatus}
+                    onChange={(e) => setFilingStatus(e.target.value as FilingStatus)}
+                >
+                    {FILING_STATUS_ORDER.map((status) => (
+                        <option key={status} value={status}>
+                            {t(FILING_STATUS_LABEL_KEYS[status])}
+                        </option>
+                    ))}
+                </select>
+            </div>,
+        ],
     );
 }

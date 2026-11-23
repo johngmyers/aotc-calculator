@@ -900,19 +900,30 @@ describe("Student section", () => {
             />,
         );
 
-        fireEvent.change(screen.getByLabelText(pig("filingStatusLabel")), {
+        const claimantRegion = screen.getByRole("region", {
+            name: pig("claimantSectionTitle"),
+        });
+        const filingStatusSelect = within(claimantRegion).getByLabelText(
+            pig("filingStatusLabel"),
+        );
+
+        fireEvent.change(filingStatusSelect, {
             target: {value: "mfs"},
         });
 
         const expectedTitle = pig("studentSectionTitle", {number: 1});
-        expect(
-            screen
-                .getByRole("heading", {name: expectedTitle, hidden: true})
-                .closest("section"),
-        ).toHaveAttribute("hidden");
-        expect(
-            screen.getByLabelText(pig("studentNameLabel")),
-        ).toHaveAttribute("hidden");
+        const heading = screen.getByRole("heading", {
+            name: expectedTitle,
+            hidden: true,
+        });
+
+        let section: HTMLElement | null = heading;
+        while (section && section.tagName !== "SECTION") {
+            section = section.parentElement;
+        }
+
+        expect(section).not.toBeNull();
+        expect(section).toHaveAttribute("hidden");
     });
 
     it("gates the wired student section when claimant has no AOTC benefit", () => {

@@ -9,9 +9,9 @@ import {IntegerInput, valueRequired} from "./IntegerInput.js";
 import {calculateAotc} from "../calc/calculateAotc.js";
 import {StudentSection} from "./StudentSection.js";
 
-const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
+export const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
-const FILING_STATUS_LABEL_KEYS = {
+export const FILING_STATUS_LABEL_KEYS = {
     single: "filingStatusSingle",
     hoh: "filingStatusHoh",
     mfj: "filingStatusMfj",
