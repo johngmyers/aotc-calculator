@@ -872,6 +872,73 @@ describe("Early results when AOTC provides no benefit to claimant", () => {
     });
 });
 
+describe("Student section", () => {
+    const pig = makePigLatinTranslator();
+
+    it("passes the translator through and renders one student section by default", () => {
+        render(
+            <AotcDependentCalculator
+                t={pig}
+                now={new Date("2026-11-23T12:00:00Z")}
+            />,
+        );
+
+        const expectedTitle = pig("studentSectionTitle", {number: 1});
+        const headings = screen.getAllByRole("heading", {name: expectedTitle});
+        expect(headings).toHaveLength(1);
+        expect(headings[0].closest("section")).not.toHaveAttribute("hidden");
+        expect(
+            screen.getByLabelText(pig("studentNameLabel")),
+        ).not.toHaveAttribute("hidden");
+    });
+
+    it("gates the wired student section when claimant filing status is MFS", () => {
+        render(
+            <AotcDependentCalculator
+                t={pig}
+                now={new Date("2026-11-23T12:00:00Z")}
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText(pig("filingStatusLabel")), {
+            target: {value: "mfs"},
+        });
+
+        const expectedTitle = pig("studentSectionTitle", {number: 1});
+        expect(
+            screen
+                .getByRole("heading", {name: expectedTitle, hidden: true})
+                .closest("section"),
+        ).toHaveAttribute("hidden");
+        expect(
+            screen.getByLabelText(pig("studentNameLabel")),
+        ).toHaveAttribute("hidden");
+    });
+
+    it("gates the wired student section when claimant has no AOTC benefit", () => {
+        render(
+            <AotcDependentCalculator
+                t={pig}
+                now={new Date("2026-11-23T12:00:00Z")}
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText(pig("agiLabel")), {
+            target: {value: "500000"},
+        });
+
+        expect(
+            screen.getByRole("heading", {name: pig("resultsSectionTitle")}),
+        ).toBeInTheDocument();
+        const expectedTitle = pig("studentSectionTitle", {number: 1});
+        expect(
+            screen
+                .getByRole("heading", {name: expectedTitle, hidden: true})
+                .closest("section"),
+        ).toHaveAttribute("hidden");
+    });
+});
+
 function getTooltipButtonForInput(
     root: HTMLElement,
     input: HTMLElement,

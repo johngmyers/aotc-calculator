@@ -1,4 +1,4 @@
-import {ReactNode, useId, useState} from "react";
+import {ReactNode, useCallback, useId, useRef, useState} from "react";
 import {getTranslator, Translator} from "./i18n.js";
 import {HelpTooltip} from "./HelpTooltip.js";
 import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
@@ -7,6 +7,7 @@ import {SubjectToKiddieTax} from "./SubjectToKiddieTax.js";
 import {getFederalLineRevision} from "../rules/federalLines.js";
 import {IntegerInput, valueRequired} from "./IntegerInput.js";
 import {calculateAotc} from "../calc/calculateAotc.js";
+import {StudentSection} from "./StudentSection.js";
 
 const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
@@ -17,6 +18,8 @@ const FILING_STATUS_LABEL_KEYS = {
     mfs: "filingStatusMfs",
     qss: "filingStatusQss",
 } as const;
+
+const MAX_STUDENTS = 1;
 
 export interface AotcDependentCalculatorProps {
     t?: Translator
@@ -62,6 +65,43 @@ export function AotcDependentCalculator({
     const [claimantNonrefundableCredits, setClaimantNonrefundableCredits] = useState<number | undefined>(undefined);
 
     const resultsNoClaimantBenefitHeadingId = useId();
+
+    const [studentNames, setStudentNames] = useState<string[]>(() =>
+        Array.from({length: MAX_STUDENTS}, () => ""),
+    );
+    const setStudentNameAt = useCallback(
+        (index: number) => (nextName: string) => {
+            setStudentNames((prev) => {
+                if (prev[index] === nextName) {
+                    return prev;
+                }
+
+                const next = [...prev];
+                next[index] = nextName;
+                return next;
+            });
+        },
+        [],
+    );
+    type NameChangeHandler = (nextName: string) => void;
+    const nameChangeHandlersRef = useRef<Map<number, NameChangeHandler>>(new Map());
+    const getStudentNameChangeHandler = useCallback((index: number) => {
+        let handler = nameChangeHandlersRef.current.get(index);
+        if (!handler) {
+            handler = (nextName: string) => {
+                setStudentNames((prev) => {
+                    if (prev[index] === nextName) {
+                        return prev;
+                    }
+                    const next = [...prev];
+                    next[index] = nextName;
+                    return next;
+                });
+            };
+            nameChangeHandlersRef.current.set(index, handler);
+        }
+        return handler;
+    }, []);
 
     return wrapNodes("main", {className: "aotc-dependent-calculator"}, () => {
         let ignoreRest = false;
@@ -246,6 +286,22 @@ export function AotcDependentCalculator({
                 );
             }
         }
+
+        studentNames.forEach((student, index) => {
+            const studentNumber = index + 1;
+
+            sections.push(
+                <hr key={`hr-student-${studentNumber}`}
+                    hidden={ignoreRest}/>,
+                <StudentSection
+                    key={`student-${studentNumber}`}
+                    studentNumber={studentNumber}
+                    hidden={ignoreRest}
+                    onNameChange={getStudentNameChangeHandler(index)}
+                    t={t}
+                />,
+            );
+        });
 
         return sections;
     });
