@@ -804,9 +804,7 @@ describe("Early results when AOTC provides no benefit to claimant", () => {
         fireEvent.change(tbncInput, {target: {value: "5000"}});
         fireEvent.change(creditsInput, {target: {value: "1000"}});
 
-        expect(
-            screen.queryByRole("region", {name: EN_US_BUNDLE.resultsSectionTitle}),
-        ).toBeNull();
+        expect(screen.queryByText(EN_US_BUNDLE.noAotcBenefitSummary)).toBeNull();
     });
 
     it("hides everything after the early Results section in DOM order", () => {
@@ -912,12 +910,10 @@ describe("Student section", () => {
         });
 
         const expectedTitle = pig("studentSectionTitle", {number: 1});
-        const heading = screen.getByRole("heading", {
+        let section: HTMLElement | null = screen.getByRole("heading", {
             name: expectedTitle,
             hidden: true,
         });
-
-        let section: HTMLElement | null = heading;
         while (section && section.tagName !== "SECTION") {
             section = section.parentElement;
         }

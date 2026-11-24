@@ -1,4 +1,4 @@
-import {ReactNode, useCallback, useId, useRef, useState} from "react";
+import {ReactNode, useCallback, useId, useMemo, useRef, useState} from "react";
 import {getTranslator, Translator} from "./i18n.js";
 import {HelpTooltip} from "./HelpTooltip.js";
 import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
@@ -6,9 +6,10 @@ import {wrapNodes} from "./wrapNodes.js";
 import {SubjectToKiddieTax} from "./SubjectToKiddieTax.js";
 import {getFederalLineRevision} from "../rules/federalLines.js";
 import {IntegerInput, valueRequired} from "./IntegerInput.js";
-import {calculateAotc} from "../calc/calculateAotc.js";
+import {AotcInput, calculateAotc} from "../calc/calculateAotc.js";
 import {StudentSection} from "./StudentSection.js";
 import {StudentExpenseCost} from "../calc/optimizeAotc.js";
+import {AotcResult} from "./AotcResult.js";
 
 export const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
@@ -64,25 +65,15 @@ export function AotcDependentCalculator({
     const [claimantTaxBeforeNonrefundableCredits, setClaimantTaxBeforeNonrefundableCredits] = useState<number | undefined>(undefined);
     const claimantNonrefundableCreditsId = useId();
     const [claimantNonrefundableCredits, setClaimantNonrefundableCredits] = useState<number | undefined>(undefined);
+    const [optimalAotcInputs, setOptimalAotcInputs] = useState<AotcInput>({
+        agi: 0,
+        students: [],
+    })
 
     const resultsNoClaimantBenefitHeadingId = useId();
 
     const [studentNames, setStudentNames] = useState<string[]>(() =>
         Array.from({length: MAX_STUDENTS}, () => ""),
-    );
-    const setStudentNameAt = useCallback(
-        (index: number) => (nextName: string) => {
-            setStudentNames((prev) => {
-                if (prev[index] === nextName) {
-                    return prev;
-                }
-
-                const next = [...prev];
-                next[index] = nextName;
-                return next;
-            });
-        },
-        [],
     );
     type NameChangeHandler = (nextName: string) => void;
     const nameChangeHandlersRef = useRef<Map<number, NameChangeHandler>>(new Map());
@@ -104,7 +95,11 @@ export function AotcDependentCalculator({
         return handler;
     }, []);
     const [studentExpenseCosts, setStudentExpenseCosts] = useState<StudentExpenseCost[][]>(() =>
-        Array.from({length: MAX_STUDENTS}, () => []),
+        Array.from({length: MAX_STUDENTS}, () => [{
+            qualifiedExpenses: 0,
+            cost: 0,
+            outOfScopeForVITA: false,
+        }]),
     );
     const setStudentExpenseCostsAt = useCallback(
         (index: number) => (nextExpenseCosts: StudentExpenseCost[]) => {
@@ -119,6 +114,7 @@ export function AotcDependentCalculator({
 
     return wrapNodes("main", {className: "aotc-dependent-calculator"}, () => {
         let ignoreRest = false;
+        let suppressResults = false;
         const sections: ReactNode[] = [
             <header key="header">
                 <h1>
@@ -167,8 +163,10 @@ export function AotcDependentCalculator({
             <hr key="hr-claimant"/>,
         ];
 
-        const claimantTaxRules =
-            FederalRules[taxYear as FederalTaxYear]?.[claimantFilingStatus];
+        const claimantTaxRules = useMemo(
+            () => FederalRules[taxYear as FederalTaxYear]?.[claimantFilingStatus],
+            [taxYear, claimantFilingStatus],
+        );
 
         sections.push(wrapNodes("section", {key: "claimant", "aria-labelledby": claimantHeadingId}, () => {
             const claimantSectionItems: ReactNode[] = [
@@ -300,6 +298,9 @@ export function AotcDependentCalculator({
                 );
             }
         }
+        if (claimantAgi === undefined || claimantTaxBeforeNonrefundableCredits === undefined) {
+            suppressResults = true
+        }
 
         studentNames.forEach((student, index) => {
             const studentNumber = index + 1;
@@ -319,6 +320,24 @@ export function AotcDependentCalculator({
                 />,
             );
         });
+
+        if (!ignoreRest && !suppressResults) {
+            sections.push(
+                <hr key={"results"}/>,
+                <AotcResult
+                    stayWithinVitaScope={stayWithinVitaScope}
+                    claimantTaxRules={claimantTaxRules}
+                    claimantRefundableIneligible={claimantRefundableIneligible}
+                    claimantAgi={claimantAgi!}
+                    claimantTaxBeforeNonrefundableCredits={claimantTaxBeforeNonrefundableCredits!}
+                    claimantNonrefundableCredits={claimantNonrefundableCredits ?? 0}
+                    studentNames={studentNames}
+                    studentExpenseCosts={studentExpenseCosts}
+                    setOptimalAotcInputs={setOptimalAotcInputs}
+                    t={t}
+                />,
+            )
+        }
 
         return sections;
     });

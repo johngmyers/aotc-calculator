@@ -48,7 +48,7 @@ export type OptimizeAotcParams = {
     tiMinusNonrefundable: number
     stayWithinVitaScope: boolean
     input: AotcInput
-    expenseCosts: StudentExpenseCost[][]
+    expenseCosts: readonly (readonly StudentExpenseCost[])[]
 };
 
 export function optimizeAotc({
@@ -58,47 +58,50 @@ export function optimizeAotc({
                                  input,
                                  expenseCosts,
                              }: OptimizeAotcParams): AotcInput {
-    // todo: Make this work for more than one student
     if (tiMinusNonrefundable < 0) {
         tiMinusNonrefundable = 0;
     }
 
-
-    return {
+    let workingAotcInput = {
         ...input,
         students: Array.from(
-            {length: input.students.length},
+            {length: expenseCosts.length},
             (_, i) => {
-                let thisAotcInput = {
-                    ...input,
-                    students: [...input.students],
-                };
-                let bestQualifiedExpenses = expenseCosts[i][0].qualifiedExpenses;
-                let bestBenefit = -1;
-                for (const expenseCost of expenseCosts[i]) {
-                    if ("errorCode" in expenseCost) {
-                        continue;
-                    }
-                    if (stayWithinVitaScope && expenseCost.outOfScopeForVITA) {
-                        continue;
-                    }
-                    thisAotcInput.students[i] = {
-                        qualifiedExpenses: expenseCost.qualifiedExpenses,
-                    };
-
-                    const aotcResult = calculateAotc(rules, thisAotcInput);
-                    const credit = aotcResult.refundableCredit + Math.min(tiMinusNonrefundable, aotcResult.nonrefundableCredit);
-                    const benefit = credit - expenseCost.cost;
-                    if (benefit > bestBenefit) {
-                        bestQualifiedExpenses = expenseCost.qualifiedExpenses
-                        bestBenefit = benefit;
-                    }
-                }
-
                 return {
-                    qualifiedExpenses: bestQualifiedExpenses,
-                };
+                    qualifiedExpenses: expenseCosts[i][0].qualifiedExpenses,
+                }
             }
         )
     }
+
+    // todo: Make this work for more than one student. Currently it dumps all cost on earlier students.
+    workingAotcInput.students.forEach((_, i) => {
+        let bestQualifiedExpenses = expenseCosts[i][0].qualifiedExpenses;
+        let bestBenefit = -1;
+        for (const expenseCost of expenseCosts[i]) {
+            if ("errorCode" in expenseCost) {
+                continue;
+            }
+            if (stayWithinVitaScope && expenseCost.outOfScopeForVITA) {
+                continue;
+            }
+            workingAotcInput.students[i] = {
+                qualifiedExpenses: expenseCost.qualifiedExpenses,
+            };
+
+            const aotcResult = calculateAotc(rules, workingAotcInput);
+            const credit = aotcResult.refundableCredit + Math.min(tiMinusNonrefundable, aotcResult.nonrefundableCredit);
+            const benefit = credit - expenseCost.cost;
+            if (benefit > bestBenefit) {
+                bestQualifiedExpenses = expenseCost.qualifiedExpenses
+                bestBenefit = benefit;
+            }
+        }
+
+        workingAotcInput.students[i] = {
+            qualifiedExpenses: bestQualifiedExpenses,
+        };
+    })
+
+    return workingAotcInput;
 }

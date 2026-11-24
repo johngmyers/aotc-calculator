@@ -5,7 +5,7 @@ import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
 import {FILING_STATUS_LABEL_KEYS, FILING_STATUS_ORDER} from "./AotcDependentCalculator.js";
 import {IntegerInput} from "./IntegerInput.js";
 import {HelpTooltip} from "./HelpTooltip.js";
-import {calculateTaxes, TaxError} from "../calc/calculateTaxes.js";
+import {calculateTaxes, GrossIncome} from "../calc/calculateTaxes.js";
 import {areStudentExpenseCostsEqual, StudentExpenseCost} from "../calc/optimizeAotc.js";
 
 export interface StudentSectionProps {
@@ -31,7 +31,7 @@ interface ComputeStudentExpenseCostsProps {
     taxYear: FederalTaxYear
     expensesCap: number
     filingStatus: FilingStatus
-    minTaxableScholarships: number
+    baseGrossIncome: GrossIncome
     minEducationExpenses: number
     maxAdditionalScholarships: number
 }
@@ -40,7 +40,7 @@ function computeStudentExpenseCosts({
                                         taxYear,
                                         expensesCap,
                                         filingStatus,
-                                        minTaxableScholarships,
+                                        baseGrossIncome,
                                         minEducationExpenses,
                                         maxAdditionalScholarships,
                                     }: ComputeStudentExpenseCostsProps): StudentExpenseCost[] {
@@ -56,14 +56,14 @@ function computeStudentExpenseCosts({
     return Array.from(
         {length: 1 + Math.min(maxAdditionalScholarships, expensesCap)},
         (_, i): StudentExpenseCost => {
-            const expenses = minEducationExpenses + i;
-            let outcome = calculateTaxes(taxRules, {
-                agi: 20_000 + i, // todo get as input
-                taxableScholarships: minTaxableScholarships + i,
-            });
+            const grossIncome = {
+                ...baseGrossIncome,
+                taxableScholarships: (baseGrossIncome.taxableScholarships ?? 0) + i,
+            }
+            const outcome = calculateTaxes(taxRules, grossIncome);
             if ("errorCode" in outcome) {
                 return {
-                    qualifiedExpenses: 0,
+                    qualifiedExpenses: minEducationExpenses + i,
                     ...outcome,
                 };
             }
@@ -103,11 +103,16 @@ export function StudentSection({
     const lastEmittedCostsRef = useRef<StudentExpenseCost[]>([]);
 
     useEffect(() => {
+        const baseGrossIncome = {
+            claimedAsDependent: true,
+            agi: 20_000, // todo get as input
+            taxableScholarships: minTaxableScholarships ?? 0,
+        }
         const nextPoints = computeStudentExpenseCosts({
             taxYear,
             expensesCap,
             filingStatus,
-            minTaxableScholarships: minTaxableScholarships ?? 0,
+            baseGrossIncome: baseGrossIncome,
             minEducationExpenses: minEducationExpenses ?? 0,
             maxAdditionalScholarships: maxAdditionalScholarships ?? 0,
         });

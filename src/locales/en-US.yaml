@@ -50,6 +50,12 @@ valueIsRequired: Value is required
 taxBeforeNonrefundableCreditsLabel: Tax before nonrefundable credits
 nonrefundableCreditsLabel: Nonrefundable credits (other than AOTC)
 resultsSectionTitle: Results
+resultsQualifiedExpenses: Qualified expenses
+resultsIncrementalCost: Incremental cost
+resultsUsableAotc: Usable AOTC
+resultsUnusableCredits: Unusable nonrefundable credits
+resultsTotalIncrementalCost: Total incremental cost
+resultsNetBenefit: Net benefit
 noAotcBenefitSummary: Claimant gets no benefit from AOTC, regardless of qualified education expenses.
 studentSectionTitle: "Student {number}"
 studentNameLabel: Name
