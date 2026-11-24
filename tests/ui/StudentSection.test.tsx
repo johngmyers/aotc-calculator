@@ -107,4 +107,81 @@ describe("StudentSection", () => {
         fireEvent.change(select, {target: {value: "hoh"}});
         expect(select).toHaveValue("hoh");
     });
+
+    it("defaults scholarship and education expense inputs to empty and updates each independently", () => {
+        render(
+            <StudentSection
+                studentNumber={1}
+                hidden={false}
+                onNameChange={vi.fn()}
+                t={testT}
+            />,
+        );
+
+        const taxableScholarshipsInput = screen.getByLabelText(
+            testT("studentMinimumTaxableScholarshipsLabel"),
+        );
+        const educationExpensesInput = screen.getByLabelText(
+            testT("studentMinimumEducationExpensesLabel"),
+        );
+        const shiftableScholarshipsInput = screen.getByLabelText(
+            testT("studentOptionalTaxableScholarshipsLabel"),
+        );
+
+        expect(taxableScholarshipsInput).toHaveValue("");
+        expect(educationExpensesInput).toHaveValue("");
+        expect(shiftableScholarshipsInput).toHaveValue("");
+
+        fireEvent.change(taxableScholarshipsInput, {target: {value: "1,500"}});
+        fireEvent.change(educationExpensesInput, {target: {value: "4,200"}});
+        fireEvent.change(shiftableScholarshipsInput, {target: {value: "2,500"}});
+
+        expect(taxableScholarshipsInput).toHaveValue("1,500");
+        expect(educationExpensesInput).toHaveValue("4,200");
+        expect(shiftableScholarshipsInput).toHaveValue("2,500");
+
+        fireEvent.change(educationExpensesInput, {target: {value: ""}});
+        expect(taxableScholarshipsInput).toHaveValue("1,500");
+        expect(educationExpensesInput).toHaveValue("");
+        expect(shiftableScholarshipsInput).toHaveValue("2,500");
+    });
+
+    it("renders help tooltips for each scholarship and education expense input", () => {
+        render(
+            <StudentSection
+                studentNumber={1}
+                hidden={false}
+                onNameChange={vi.fn()}
+                t={testT}
+            />,
+        );
+
+        const triggers = screen.getAllByRole("button", {
+            name: testT("helpTooltipDefaultTriggerLabel"),
+        });
+        expect(triggers).toHaveLength(3);
+    });
+
+    it("hides descendant controls when section hidden is true", () => {
+        const {container} = render(
+            <StudentSection
+                studentNumber={1}
+                hidden={true}
+                onNameChange={vi.fn()}
+                t={testT}
+            />,
+        );
+
+        const section = container.querySelector("section");
+        expect(section).toHaveAttribute("hidden");
+        expect(
+            screen.getByLabelText(testT("studentMinimumTaxableScholarshipsLabel")),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByLabelText(testT("studentMinimumEducationExpensesLabel")),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByLabelText(testT("studentOptionalTaxableScholarshipsLabel")),
+        ).toBeInTheDocument();
+    });
 });

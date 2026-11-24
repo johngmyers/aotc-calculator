@@ -53,3 +53,9 @@ resultsSectionTitle: Results
 noAotcBenefitSummary: Claimant gets no benefit from AOTC, regardless of qualified education expenses.
 studentSectionTitle: "Student {number}"
 studentNameLabel: Name
+studentMinimumTaxableScholarshipsLabel: Taxable scholarships
+studentMinimumTaxableScholarshipsTooltip: Already-taxable scholarship income before shifting any tax-free scholarships
+studentMinimumEducationExpensesLabel: Qualified education expenses
+studentMinimumEducationExpensesTooltip: Not covered by tax-free scholarships before shifting any tax-free scholarships
+studentOptionalTaxableScholarshipsLabel: Shiftable tax-free scholarships
+studentOptionalTaxableScholarshipsTooltip: Maximum tax-free scholarships which can be applied to qualified education expenses
