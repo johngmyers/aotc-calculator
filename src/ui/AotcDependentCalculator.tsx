@@ -7,7 +7,7 @@ import {SubjectToKiddieTax} from "./SubjectToKiddieTax.js";
 import {getFederalLineRevision} from "../rules/federalLines.js";
 import {IntegerInput, valueRequired} from "./IntegerInput.js";
 import {calculateAotc} from "../calc/calculateAotc.js";
-import {StudentSection} from "./StudentSection.js";
+import {StudentExpenseCost, StudentSection} from "./StudentSection.js";
 
 export const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
@@ -102,6 +102,19 @@ export function AotcDependentCalculator({
         }
         return handler;
     }, []);
+    const [studentExpenseCosts, setStudentExpenseCosts] = useState<StudentExpenseCost[][]>(() =>
+        Array.from({length: MAX_STUDENTS}, () => []),
+    );
+    const setStudentExpenseCostsAt = useCallback(
+        (index: number) => (nextExpenseCosts: StudentExpenseCost[]) => {
+            setStudentExpenseCosts((prev) => {
+                const next = [...prev];
+                next[index] = nextExpenseCosts;
+                return next;
+            });
+        },
+        [],
+    );
 
     return wrapNodes("main", {className: "aotc-dependent-calculator"}, () => {
         let ignoreRest = false;
@@ -297,7 +310,10 @@ export function AotcDependentCalculator({
                     key={`student-${studentNumber}`}
                     studentNumber={studentNumber}
                     hidden={ignoreRest}
+                    taxYear={taxYear as FederalTaxYear}
+                    expensesCap={claimantTaxRules.aotc?.secondTierCap ?? 1}
                     onNameChange={getStudentNameChangeHandler(index)}
+                    onExpenseCostsChange={setStudentExpenseCostsAt(index)}
                     t={t}
                 />,
             );

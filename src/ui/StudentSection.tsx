@@ -1,16 +1,62 @@
-import {ReactNode, useEffect, useId, useState} from "react";
+import {ReactNode, useEffect, useId, useRef, useState} from "react";
 import {Translator} from "./i18n.js";
 import {wrapNodes} from "./wrapNodes.js";
-import {FilingStatus} from "../rules/federal.js";
+import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
 import {FILING_STATUS_LABEL_KEYS, FILING_STATUS_ORDER} from "./AotcDependentCalculator.js";
 import {IntegerInput} from "./IntegerInput.js";
 import {HelpTooltip} from "./HelpTooltip.js";
+import {calculateTaxes, TaxError} from "../calc/calculateTaxes.js";
 
 export interface StudentSectionProps {
     studentNumber: number
     hidden: boolean
+    taxYear: FederalTaxYear
+    expensesCap: number
     onNameChange: (name: string) => void
+    onExpenseCostsChange: (expenseCosts: StudentExpenseCost[]) => void
     t: Translator
+}
+
+export type StudentExpenseCost = { qualifiedExpenses: number } & (TaxError | {
+    cost: number
+    outOfScopeForVITA: boolean
+});
+
+function isTaxError(value: StudentExpenseCost): value is StudentExpenseCost & TaxError {
+    return "errorCode" in value;
+}
+
+function areStudentExpenseCostsEqual(
+    a: readonly StudentExpenseCost[],
+    b: readonly StudentExpenseCost[],
+): boolean {
+    if (a.length !== b.length) {
+        return false;
+    }
+    return a.every(
+        (point, i) => {
+            const other = b[i];
+            if (point.qualifiedExpenses !== other.qualifiedExpenses) {
+                return false;
+            }
+
+            if (isTaxError(point) && isTaxError(other)) {
+                return (
+                    point.errorCode === other.errorCode &&
+                    point.errorMessage === other.errorMessage
+                );
+            }
+
+            if (!isTaxError(point) && !isTaxError(other)) {
+                return (
+                    point.cost === other.cost &&
+                    point.outOfScopeForVITA === other.outOfScopeForVITA
+                );
+            }
+
+            return false;
+        }
+    )
 }
 
 function getEffectiveStudentName(
@@ -22,10 +68,61 @@ function getEffectiveStudentName(
     return trimmed ? trimmed : t("studentSectionTitle", {number: studentNumber});
 }
 
+interface ComputeStudentExpenseCostsProps {
+    taxYear: FederalTaxYear
+    expensesCap: number
+    filingStatus: FilingStatus
+    minTaxableScholarships: number
+    minEducationExpenses: number
+    maxAdditionalScholarships: number
+}
+
+function computeStudentExpenseCosts({
+                                        taxYear,
+                                        expensesCap,
+                                        filingStatus,
+                                        minTaxableScholarships,
+                                        minEducationExpenses,
+                                        maxAdditionalScholarships,
+                                    }: ComputeStudentExpenseCostsProps): StudentExpenseCost[] {
+    const taxRules = FederalRules[taxYear]?.[filingStatus];
+    if (!taxRules) {
+        return [{
+            qualifiedExpenses: 0,
+            cost: 0,
+            outOfScopeForVITA: false,
+        }];
+    }
+
+    return Array.from(
+        {length: 1 + Math.min(maxAdditionalScholarships, expensesCap)},
+        (_, i): StudentExpenseCost => {
+            const expenses = minEducationExpenses + i;
+            let outcome = calculateTaxes(taxRules, {
+                agi: 20_000 + i, // todo get as input
+                taxableScholarships: minTaxableScholarships + i,
+            });
+            if ("errorCode" in outcome) {
+                return {
+                    qualifiedExpenses: 0,
+                    ...outcome,
+                };
+            }
+            return {
+                qualifiedExpenses: minEducationExpenses + i,
+                cost: outcome.tax,
+                outOfScopeForVITA: outcome.outOfScopeForVITA,
+            }
+        });
+}
+
 export function StudentSection({
                                    studentNumber,
                                    hidden,
+                                   taxYear,
+                                   expensesCap,
                                    onNameChange,
+                                   onExpenseCostsChange,
                                    t,
                                }: StudentSectionProps) {
     const headingId = useId();
@@ -43,6 +140,32 @@ export function StudentSection({
     useEffect(() => {
         onNameChange(getEffectiveStudentName(rawName, studentNumber, t));
     }, [onNameChange, rawName, studentNumber, t]);
+
+    const lastEmittedCostsRef = useRef<StudentExpenseCost[]>([]);
+
+    useEffect(() => {
+        const nextPoints = computeStudentExpenseCosts({
+            taxYear,
+            expensesCap,
+            filingStatus,
+            minTaxableScholarships: minTaxableScholarships ?? 0,
+            minEducationExpenses: minEducationExpenses ?? 0,
+            maxAdditionalScholarships: maxAdditionalScholarships ?? 0,
+        });
+
+        if (!areStudentExpenseCostsEqual(lastEmittedCostsRef.current, nextPoints)) {
+            lastEmittedCostsRef.current = nextPoints;
+            onExpenseCostsChange(nextPoints);
+        }
+    }, [
+        taxYear,
+        expensesCap,
+        filingStatus,
+        minTaxableScholarships,
+        minEducationExpenses,
+        maxAdditionalScholarships,
+        onExpenseCostsChange,
+    ]);
 
     return wrapNodes(
         "section",

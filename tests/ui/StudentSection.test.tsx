@@ -6,6 +6,12 @@ import {FILING_STATUS_LABEL_KEYS, FILING_STATUS_ORDER} from "../../src/ui/AotcDe
 
 const testT: Translator = getTranslator("en-US");
 
+const DEFAULT_PROPS = {
+    taxYear: 2026 as const,
+    expensesCap: 4_000,
+    onExpenseCostsChange: vi.fn(),
+};
+
 afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
@@ -17,6 +23,7 @@ describe("StudentSection", () => {
 
         render(
             <StudentSection
+                {...DEFAULT_PROPS}
                 studentNumber={1}
                 hidden={false}
                 onNameChange={onNameChange}
@@ -34,6 +41,7 @@ describe("StudentSection", () => {
 
         render(
             <StudentSection
+                {...DEFAULT_PROPS}
                 studentNumber={2}
                 hidden={false}
                 onNameChange={onNameChange}
@@ -53,6 +61,7 @@ describe("StudentSection", () => {
     it("hides the section when hidden is true", () => {
         const {container} = render(
             <StudentSection
+                {...DEFAULT_PROPS}
                 studentNumber={1}
                 hidden={true}
                 onNameChange={vi.fn()}
@@ -68,6 +77,7 @@ describe("StudentSection", () => {
     it("defaults student filing status to single and renders all filing status options", () => {
         render(
             <StudentSection
+                {...DEFAULT_PROPS}
                 studentNumber={1}
                 hidden={false}
                 onNameChange={vi.fn()}
@@ -93,6 +103,7 @@ describe("StudentSection", () => {
     it("updates student filing status when changed", () => {
         render(
             <StudentSection
+                {...DEFAULT_PROPS}
                 studentNumber={1}
                 hidden={false}
                 onNameChange={vi.fn()}
@@ -111,6 +122,7 @@ describe("StudentSection", () => {
     it("defaults scholarship and education expense inputs to empty and updates each independently", () => {
         render(
             <StudentSection
+                {...DEFAULT_PROPS}
                 studentNumber={1}
                 hidden={false}
                 onNameChange={vi.fn()}
@@ -149,6 +161,7 @@ describe("StudentSection", () => {
     it("renders help tooltips for each scholarship and education expense input", () => {
         render(
             <StudentSection
+                {...DEFAULT_PROPS}
                 studentNumber={1}
                 hidden={false}
                 onNameChange={vi.fn()}
@@ -165,6 +178,7 @@ describe("StudentSection", () => {
     it("hides descendant controls when section hidden is true", () => {
         const {container} = render(
             <StudentSection
+                {...DEFAULT_PROPS}
                 studentNumber={1}
                 hidden={true}
                 onNameChange={vi.fn()}
