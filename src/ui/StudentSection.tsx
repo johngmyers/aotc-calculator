@@ -6,6 +6,7 @@ import {FILING_STATUS_LABEL_KEYS, FILING_STATUS_ORDER} from "./AotcDependentCalc
 import {IntegerInput} from "./IntegerInput.js";
 import {HelpTooltip} from "./HelpTooltip.js";
 import {calculateTaxes, TaxError} from "../calc/calculateTaxes.js";
+import {areStudentExpenseCostsEqual, StudentExpenseCost} from "../calc/optimizeAotc.js";
 
 export interface StudentSectionProps {
     studentNumber: number
@@ -15,48 +16,6 @@ export interface StudentSectionProps {
     onNameChange: (name: string) => void
     onExpenseCostsChange: (expenseCosts: StudentExpenseCost[]) => void
     t: Translator
-}
-
-export type StudentExpenseCost = { qualifiedExpenses: number } & (TaxError | {
-    cost: number
-    outOfScopeForVITA: boolean
-});
-
-function isTaxError(value: StudentExpenseCost): value is StudentExpenseCost & TaxError {
-    return "errorCode" in value;
-}
-
-function areStudentExpenseCostsEqual(
-    a: readonly StudentExpenseCost[],
-    b: readonly StudentExpenseCost[],
-): boolean {
-    if (a.length !== b.length) {
-        return false;
-    }
-    return a.every(
-        (point, i) => {
-            const other = b[i];
-            if (point.qualifiedExpenses !== other.qualifiedExpenses) {
-                return false;
-            }
-
-            if (isTaxError(point) && isTaxError(other)) {
-                return (
-                    point.errorCode === other.errorCode &&
-                    point.errorMessage === other.errorMessage
-                );
-            }
-
-            if (!isTaxError(point) && !isTaxError(other)) {
-                return (
-                    point.cost === other.cost &&
-                    point.outOfScopeForVITA === other.outOfScopeForVITA
-                );
-            }
-
-            return false;
-        }
-    )
 }
 
 function getEffectiveStudentName(

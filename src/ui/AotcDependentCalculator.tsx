@@ -7,7 +7,8 @@ import {SubjectToKiddieTax} from "./SubjectToKiddieTax.js";
 import {getFederalLineRevision} from "../rules/federalLines.js";
 import {IntegerInput, valueRequired} from "./IntegerInput.js";
 import {calculateAotc} from "../calc/calculateAotc.js";
-import {StudentExpenseCost, StudentSection} from "./StudentSection.js";
+import {StudentSection} from "./StudentSection.js";
+import {StudentExpenseCost} from "../calc/optimizeAotc.js";
 
 export const FILING_STATUS_ORDER: FilingStatus[] = ["single", "hoh", "mfj", "mfs", "qss"];
 
