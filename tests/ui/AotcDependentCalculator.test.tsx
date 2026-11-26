@@ -61,7 +61,7 @@ describe("AotcDependentCalculator", () => {
 
         const list = screen.getByRole("list");
         const items = within(list).getAllByRole("listitem");
-        expect(items).toHaveLength(14);
+        expect(items).toHaveLength(15);
         expect(items[0]).toHaveTextContent(/Qualified Business Income \(QBI\)/);
     });
 

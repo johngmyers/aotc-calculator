@@ -196,6 +196,11 @@ const NUMERIC_LINE_FIELDS: readonly NumericLineFieldSpec[] = [
         required: true,
     },
     {
+        lineKey: "earnedIncome",
+        pigLatinLabel: "Earnedyay incomeyay (excludingyay olarshipsschay otnay eportedray onyay Way-2)",
+        pigLatinTooltip: "Asyay efinedday ybay ethay Andardstay Eductionday Orksheetway orfay Ependentsday, utbay excludingyay olarshipsschay otnay eportedray onyay Way-2",
+    },
+    {
         lineKey: "ltcg",
         pigLatinLabel: "Onglay-ermtay apitalcay ainsgay",
         pigLatinTooltip: "Ormfay 1040 inelay 7a",
@@ -203,8 +208,8 @@ const NUMERIC_LINE_FIELDS: readonly NumericLineFieldSpec[] = [
     },
     {
         lineKey: "studentMinimumTaxableScholarships",
-        pigLatinLabel: "Axabletay olarshipsschay",
-        pigLatinTooltip: "Alreadyyay-axabletay olarshipschay incomeyay eforebay iftingshay anyyay axtay-eefray olarshipsschay",
+        pigLatinLabel: "Axabletay olarshipsschay otnay eportedray onyay Way-2",
+        pigLatinTooltip: "Alreadyyay-axabletay olarshipschay incomeyay, excludingyay atthay eportedray onyay Way-2, eforebay iftingshay anyyay axtay-eefray olarshipsschay",
     },
     {
         lineKey: "studentMinimumEducationExpenses",

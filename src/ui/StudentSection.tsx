@@ -95,6 +95,8 @@ export function StudentSection({
     const [filingStatus, setFilingStatus] = useState<FilingStatus>("single");
     const agiId = useId();
     const [agi, setAgi] = useState<number | undefined>(undefined);
+    const earnedIncomeId = useId();
+    const [earnedIncome, setEarnedIncome] = useState<number | undefined>(undefined);
     const ltcgId = useId();
     const [ltcg, setLtcg] = useState<number | undefined>(undefined);
     const minTaxableScholarshipsId = useId();
@@ -119,6 +121,7 @@ export function StudentSection({
                 claimedAsDependent: true,
                 agi: agi,
                 ltcg: ltcg,
+                earnedIncome: earnedIncome,
                 taxableScholarships: minTaxableScholarships ?? 0,
             }
             return computeStudentExpenseCosts({
@@ -140,6 +143,7 @@ export function StudentSection({
         expensesCap,
         filingStatus,
         agi,
+        earnedIncome,
         ltcg,
         minTaxableScholarships,
         minEducationExpenses,
@@ -195,6 +199,20 @@ export function StudentSection({
                 <HelpTooltip
                     t={t}
                     lineRefs={federalLineRevision.agi}
+                />
+            </div>,
+            <div key="earned-income">
+                <label htmlFor={earnedIncomeId}>{t("earnedIncomeLabel")}</label>
+                {" "}
+                <IntegerInput
+                    id={earnedIncomeId}
+                    value={earnedIncome}
+                    onValueChange={setEarnedIncome}
+                />
+                {" "}
+                <HelpTooltip
+                    t={t}
+                    textKey="earnedIncomeTooltip"
                 />
             </div>,
             <div key="ltcg">

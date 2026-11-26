@@ -12,13 +12,14 @@ scopeExclusionsBlurb: |-
     <li>Itemized deductions reduced due to high AGI</li>
     <li>Net Operating Loss (NOL) carryforwards</li>
     <li>Form 2555 (Foreign Earned Income)</li>
-    <li>Income from sources from American territories excluded by bona-fide resident</li>
+    <li>Income from U.S. territories excluded as a bona fide resident</li>
     <li>Foreign nonresident</li>
     <li>Dual-status alien</li>
     <li>SALT cap reduced due to high AGI</li>
     <li>Traditional IRA contribution deduction reduced due to high AGI</li>
     <li>Net Investment Income Tax (NIIT)</li>
     <li>Earned Income Tax Credit (EITC) (due to having a qualifying child)</li>
+    <li>Receives taxable distributions from a Qualified Disability Trust and is subject to Form 8615 (Kiddie Tax)</li>
   </ul>
 stayWithinVitaScopeLabel: Stay within scope for VITA/TCE
 stayWithinVitaScopeTooltip: >-
@@ -47,6 +48,8 @@ federalLineKindSchedule: Schedule
 federalLineListSeparator: ", "
 federalLineReference: "{refKind} {refForm} line {refLine}"
 agiLabel: AGI
+earnedIncomeLabel: "Earned income (excluding scholarships not reported on W-2)"
+earnedIncomeTooltip: "As defined by the Standard Deduction Worksheet for Dependents, but excluding scholarships not reported on W-2"
 ltcgLabel: Long-term capital gains
 valueIsRequired: Value is required
 taxBeforeNonrefundableCreditsLabel: Tax before nonrefundable credits
@@ -61,8 +64,8 @@ resultsNetBenefit: Net benefit
 noAotcBenefitSummary: Claimant gets no benefit from AOTC, regardless of qualified education expenses.
 studentSectionTitle: "Student {number}"
 studentNameLabel: Name
-studentMinimumTaxableScholarshipsLabel: Taxable scholarships
-studentMinimumTaxableScholarshipsTooltip: Already-taxable scholarship income before shifting any tax-free scholarships
+studentMinimumTaxableScholarshipsLabel: Taxable scholarships not reported on W-2
+studentMinimumTaxableScholarshipsTooltip: Already-taxable scholarship income, excluding that reported on W-2, before shifting any tax-free scholarships
 studentMinimumEducationExpensesLabel: Qualified education expenses
 studentMinimumEducationExpensesTooltip: Not covered by tax-free scholarships before shifting any tax-free scholarships
 studentOptionalTaxableScholarshipsLabel: Shiftable tax-free scholarships
