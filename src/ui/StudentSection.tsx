@@ -194,7 +194,7 @@ export function StudentSection({
                 {" "}
                 <HelpTooltip
                     t={t}
-                    lineRef={federalLineRevision.agi}
+                    lineRefs={federalLineRevision.agi}
                 />
             </div>,
             <div key="ltcg">
@@ -209,7 +209,7 @@ export function StudentSection({
                 {" "}
                 <HelpTooltip
                     t={t}
-                    lineRef={federalLineRevision.ltcg}
+                    lineRefs={federalLineRevision.ltcg}
                 />
             </div>,
             <div key="taxable-scholarships">

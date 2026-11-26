@@ -44,6 +44,7 @@ hasLivingParentLabel: At least one parent is living at end of tax year
 earnedMoreThanHalfSupportLabel: Earned income was more than half of their own support
 federalLineKindForm: Form
 federalLineKindSchedule: Schedule
+federalLineListSeparator: ", "
 federalLineReference: "{refKind} {refForm} line {refLine}"
 agiLabel: AGI
 ltcgLabel: Long-term capital gains

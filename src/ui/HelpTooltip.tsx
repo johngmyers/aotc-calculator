@@ -7,26 +7,29 @@ export type HelpTooltipProps =
     t: Translator;
     textKey: MessageKey;
     vars?: Record<string, string | number | undefined>;
-    lineRef?: never;
+    lineRefs?: never;
 }
     | {
     t: Translator;
-    lineRef: FormLineRef;
+    lineRefs: readonly FormLineRef[];
     textKey?: never;
     vars?: never;
 };
 
 function resolveTooltipText(t: Translator, props: HelpTooltipProps): string {
-    if (props.lineRef !== undefined) {
-        const kindKey =
-            props.lineRef.kind === "form"
-                ? "federalLineKindForm"
-                : "federalLineKindSchedule";
-        return t("federalLineReference", {
-            refKind: t(kindKey),
-            refForm: props.lineRef.form,
-            refLine: props.lineRef.line,
-        });
+    if (props.lineRefs !== undefined) {
+        const separator = t("federalLineListSeparator");
+        return props.lineRefs.map((lineRef) => {
+            const kindKey =
+                lineRef.kind === "form"
+                    ? "federalLineKindForm"
+                    : "federalLineKindSchedule";
+            return t("federalLineReference", {
+                refKind: t(kindKey),
+                refForm: lineRef.form,
+                refLine: lineRef.line,
+            });
+        }).join(separator);
     }
     return t(props.textKey, props.vars);
 }

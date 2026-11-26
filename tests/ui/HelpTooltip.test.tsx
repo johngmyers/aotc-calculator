@@ -60,37 +60,33 @@ describe("HelpTooltip", () => {
 
     it("formats form line references with localized kind label", () => {
         const pig = makePigLatinTranslator();
-        const lineRef = {kind: "form" as const, form: "1040", line: "11"};
+        const lineRefs = [
+            {kind: "form" as const, form: "1040", line: "11"},
+            {kind: "schedule" as const, form: "B", line: "33"},
+        ];
 
-        render(<HelpTooltip t={pig} lineRef={lineRef}/>);
+        render(<HelpTooltip t={pig} lineRefs={lineRefs}/>);
         const button = screen.getByRole("button");
         expect(button).toHaveAccessibleName(pig("helpTooltipDefaultTriggerLabel"));
 
         fireEvent.focus(button);
         const tooltip = screen.getByRole("tooltip");
-        const expectedText = pig("federalLineReference", {
-            refKind: pig("federalLineKindForm"),
-            refForm: "1040",
-            refLine: "11",
-        });
-        expect(tooltip).toHaveTextContent(expectedText);
+        expect(tooltip).toHaveTextContent("Ormfay 1040 inelay 11;Eduleschay B inelay 33");
     });
 
     it("formats schedule line references with localized kind label and closes on Escape", () => {
         const pig = makePigLatinTranslator();
-        const lineRef = {kind: "schedule" as const, form: "1", line: "11"};
+        const lineRefs = [
+            {kind: "form" as const, form: "1040", line: "11"},
+            {kind: "schedule" as const, form: "B", line: "33"},
+        ];
 
-        render(<HelpTooltip t={pig} lineRef={lineRef}/>);
+        render(<HelpTooltip t={pig} lineRefs={lineRefs}/>);
         const button = screen.getByRole("button");
 
         fireEvent.mouseEnter(button);
         const tooltip = screen.getByRole("tooltip");
-        const expectedText = pig("federalLineReference", {
-            refKind: pig("federalLineKindSchedule"),
-            refForm: "1",
-            refLine: "11",
-        });
-        expect(tooltip).toHaveTextContent(expectedText);
+        expect(tooltip).toHaveTextContent("Ormfay 1040 inelay 11;Eduleschay B inelay 33");
 
         fireEvent.keyDown(button, {key: "Escape"});
         expect(screen.queryByRole("tooltip")).toBeNull();

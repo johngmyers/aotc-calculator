@@ -3,8 +3,7 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {createTranslator, EN_US_BUNDLE, type MessageBundle,} from "../../src/ui/i18n.js";
 import {AotcDependentCalculator} from "../../src/ui/AotcDependentCalculator.js";
 import {makePigLatinTranslator} from "./pigLatin.js";
-import {FederalRules, FederalTaxYear} from "../../src/rules/federal.js";
-import {getFederalLineRevision} from "../../src/rules/federalLines.js";
+import {FederalRules} from "../../src/rules/federal.js";
 import {getTooltipButtonForInput} from "./helpers.js";
 
 afterEach(() => {
@@ -314,10 +313,7 @@ describe("Claimant section", () => {
         fireEvent.focus(tooltipTrigger);
 
         const tooltip = screen.getByRole("tooltip");
-        const agiRef = getFederalLineRevision(2026).agi;
-        expect(tooltip).toHaveTextContent(
-            new RegExp(`${agiRef.form}.*${agiRef.line}`, "i"),
-        );
+        expect(tooltip).toHaveTextContent("Form 1040 line 11, Form 1040-SR line 11");
     });
 
     it("formats claimant AGI with commas and preserves it across filing status changes", () => {
@@ -355,8 +351,6 @@ describe("Claimant section", () => {
             fireEvent.change(yearSelect, {target: {value: String(nextYear)}});
         }
 
-        const activeYear = Number(yearSelect.value);
-        const expectedRef = getFederalLineRevision(activeYear as FederalTaxYear).agi;
         const claimantRegion = screen.getByRole("region", {
             name: EN_US_BUNDLE.claimantSectionTitle,
         });
@@ -369,9 +363,7 @@ describe("Claimant section", () => {
 
         fireEvent.focus(tooltipTrigger);
         const tooltip = screen.getByRole("tooltip");
-        expect(tooltip).toHaveTextContent(
-            new RegExp(`${expectedRef.form}.*${expectedRef.line}`, "i"),
-        );
+        expect(tooltip).toHaveTextContent("Form 1040 line 11, Form 1040-SR line 11");
     });
 
     it("renders required asterisks on AGI and tax before nonrefundable credits", () => {
@@ -478,10 +470,7 @@ describe("Claimant section", () => {
         fireEvent.focus(tooltipTrigger);
 
         const tooltip = screen.getByRole("tooltip");
-        const taxRef = getFederalLineRevision(2026).taxBeforeNonrefundableCredits;
-        expect(tooltip).toHaveTextContent(
-            new RegExp(`${taxRef.form}.*${taxRef.line}`, "i"),
-        );
+        expect(tooltip).toHaveTextContent("Form 1040 line 18, Form 1040-SR line 18");
     });
 
     it("formats tax before nonrefundable credits with commas and preserves it across filing status changes", () => {
@@ -519,9 +508,6 @@ describe("Claimant section", () => {
             fireEvent.change(yearSelect, {target: {value: String(nextYear)}});
         }
 
-        const activeYear = Number(yearSelect.value);
-        const expectedRef = getFederalLineRevision(activeYear as FederalTaxYear)
-            .taxBeforeNonrefundableCredits;
         const claimantRegion = screen.getByRole("region", {
             name: EN_US_BUNDLE.claimantSectionTitle,
         });
@@ -535,9 +521,7 @@ describe("Claimant section", () => {
 
         fireEvent.focus(tooltipTrigger);
         const tooltip = screen.getByRole("tooltip");
-        expect(tooltip).toHaveTextContent(
-            new RegExp(`${expectedRef.form}.*${expectedRef.line}`, "i"),
-        );
+        expect(tooltip).toHaveTextContent("Form 1040 line 18, Form 1040-SR line 18");
     });
 
     it("validates required tax before nonrefundable credits on blur and clears on entry", () => {
@@ -581,10 +565,7 @@ describe("Claimant section", () => {
         fireEvent.focus(tooltipTrigger);
 
         const tooltip = screen.getByRole("tooltip");
-        const creditsRef = getFederalLineRevision(2026).nonrefundableCredits;
-        expect(tooltip).toHaveTextContent(
-            new RegExp(`${creditsRef.form}.*${creditsRef.line}`, "i"),
-        );
+        expect(tooltip).toHaveTextContent("Form 1040 line 21, Form 1040-SR line 21");
     });
 
     it("formats nonrefundable credits with commas and preserves it across filing status changes", () => {
@@ -622,9 +603,6 @@ describe("Claimant section", () => {
             fireEvent.change(yearSelect, {target: {value: String(nextYear)}});
         }
 
-        const activeYear = Number(yearSelect.value);
-        const expectedRef = getFederalLineRevision(activeYear as FederalTaxYear)
-            .nonrefundableCredits;
         const claimantRegion = screen.getByRole("region", {
             name: EN_US_BUNDLE.claimantSectionTitle,
         });
@@ -638,9 +616,7 @@ describe("Claimant section", () => {
 
         fireEvent.focus(tooltipTrigger);
         const tooltip = screen.getByRole("tooltip");
-        expect(tooltip).toHaveTextContent(
-            new RegExp(`${expectedRef.form}.*${expectedRef.line}`, "i"),
-        );
+        expect(tooltip).toHaveTextContent("Form 1040 line 21, Form 1040-SR line 21");
     });
 
     it("allows nonrefundable credits to remain empty on blur without required error", () => {

@@ -58,7 +58,10 @@ export function createPigLatinBundle(
         key,
         transform(source[key as MessageKey]),
     ]);
-    return Object.fromEntries(entries) as MessageBundle;
+    return {
+        ...(Object.fromEntries(entries) as MessageBundle),
+        federalLineListSeparator: ";",
+    } as MessageBundle;
 }
 
 export function makePigLatinTranslator(

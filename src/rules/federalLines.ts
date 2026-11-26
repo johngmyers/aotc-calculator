@@ -9,24 +9,38 @@ export interface FormLineRef {
 }
 
 export interface FederalLineRevision {
-    agi: FormLineRef
-    ltcg: FormLineRef
-    taxBeforeNonrefundableCredits: FormLineRef
-    nonrefundableCredits: FormLineRef
+    agi: readonly FormLineRef[]
+    ltcg: readonly FormLineRef[]
+    taxBeforeNonrefundableCredits: readonly FormLineRef[]
+    nonrefundableCredits: readonly FormLineRef[]
 }
 
 export const FEDERAL_LINE_REVISIONS: Record<number, FederalLineRevision> = {
     2026: {
-        agi: {kind: "form", form: "1040", line: "11"},
-        ltcg: {kind: "form", form: "1040", line: "7a"},
-        taxBeforeNonrefundableCredits: {kind: "form", form: "1040", line: "18"},
-        nonrefundableCredits: {kind: "form", form: "1040", line: "21"},
+        agi: [
+            {kind: "form", form: "1040", line: "11"},
+            {kind: "form", form: "1040-SR", line: "11"},
+        ],
+        ltcg: [
+            {kind: "form", form: "1040", line: "7a"},
+            {kind: "form", form: "1040-SR", line: "7a"},
+        ],
+        taxBeforeNonrefundableCredits: [
+            {kind: "form", form: "1040", line: "18"},
+            {kind: "form", form: "1040-SR", line: "18"},
+        ],
+        nonrefundableCredits: [
+            {kind: "form", form: "1040", line: "21"},
+            {kind: "form", form: "1040-SR", line: "21"},
+        ],
     },
     // Example if AGI moves to a schedule in a later revision:
     // 2027: {
-    //     agi: {kind: "schedule", form: "1", line: "11"},
-    //     taxableIncome: {kind: "form", form: "1040", line: "15"},
-    // },
+    //     agi: [
+    //         {kind: "schedule", form: "1", line: "11"},
+    //         {kind: "form", form: "1040-SR", line: "11a"},
+    //     ],
+    //     ...
 };
 
 export function getFederalLineRevision(taxYear: FederalTaxYear): FederalLineRevision {

@@ -222,7 +222,7 @@ export function AotcDependentCalculator({
                     {" "}
                     <HelpTooltip
                         t={t}
-                        lineRef={federalLineRevision.agi}
+                        lineRefs={federalLineRevision.agi}
                     />
                 </div>,
                 <div key="claimant-tax" hidden={ignoreRest}>
@@ -239,7 +239,7 @@ export function AotcDependentCalculator({
                     {" "}
                     <HelpTooltip
                         t={t}
-                        lineRef={federalLineRevision.taxBeforeNonrefundableCredits}
+                        lineRefs={federalLineRevision.taxBeforeNonrefundableCredits}
                     />
                 </div>,
                 <div key="claimant-credits" hidden={ignoreRest}>
@@ -253,7 +253,7 @@ export function AotcDependentCalculator({
                     {" "}
                     <HelpTooltip
                         t={t}
-                        lineRef={federalLineRevision.nonrefundableCredits}
+                        lineRefs={federalLineRevision.nonrefundableCredits}
                     />
                 </div>,
             );
