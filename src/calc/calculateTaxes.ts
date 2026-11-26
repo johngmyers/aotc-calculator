@@ -215,7 +215,7 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
     let tax = 0;
     let previousBracket = 0;
 
-    const ltcg = rules.capitalGainsBrackets ? Math.min(grossIncome.ltcg ?? 0, taxableIncome) : 0;
+    const ltcg = rules.capitalGainsBrackets ? Math.max(0, Math.min(grossIncome.ltcg ?? 0, taxableIncome)) : 0;
     const ordinaryIncome = taxableIncome - ltcg
 
     for (const bracket of rules.brackets) {

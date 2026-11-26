@@ -342,6 +342,22 @@ describe('calculateTaxes - Capital Gains Brackets & Income Stacking', () => {
         expect(result.outOfScopeForVITA).toBe(false);
     });
 
+    it('treats negative ltcg the same as zero ltcg', () => {
+        const zeroLtcg = calculateTaxes(stackedRules, {
+            agi: 20000,
+            ltcg: 0,
+        });
+        const negativeLtcg = calculateTaxes(stackedRules, {
+            agi: 20000,
+            ltcg: -5000,
+        });
+
+        expect(negativeLtcg).toEqual(zeroLtcg);
+        expect(negativeLtcg.taxableIncome).toBe(10000);
+        expect(negativeLtcg.tax).toBe(1000);
+        expect(negativeLtcg.outOfScopeForVITA).toBe(false);
+    });
+
     it('effectively ignores ltcg if capitalGainsBrackets are missing from rules', () => {
         const rulesWithoutCapGains: TaxRules = {
             standardDeduction: 0,
@@ -939,7 +955,7 @@ describe('calculateTaxes - charitableContributions', () => {
             disallowItemizedDeductions: true,
         };
 
-       const result = calculateTaxes(flatTaxRules, {
+        const result = calculateTaxes(flatTaxRules, {
             agi: 30000,
             cashGiftsToPublicCharities: 1000,
             otherCharitableContributions: 5000,
