@@ -59,6 +59,7 @@ function computeStudentExpenseCosts({
         (_, i): StudentExpenseCost => {
             const grossIncome = {
                 ...baseGrossIncome,
+                agi: baseGrossIncome.agi + i,
                 taxableScholarships: (baseGrossIncome.taxableScholarships ?? 0) + i,
             }
             const outcome = calculateTaxes(taxRules, grossIncome);

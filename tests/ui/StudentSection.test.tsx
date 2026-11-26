@@ -121,6 +121,40 @@ describe("StudentSection", () => {
         expect(select).toHaveValue("hoh");
     });
 
+    it("increases AGI when shifting optional scholarships so incremental cost does not turn negative", () => {
+        const onExpenseCostsChange = vi.fn();
+
+        render(
+            <StudentSection
+                {...DEFAULT_PROPS}
+                taxYear={2026}
+                expensesCap={4_000}
+                onExpenseCostsChange={onExpenseCostsChange}
+                studentNumber={1}
+                hidden={false}
+                onNameChange={vi.fn()}
+                t={testT}
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText(testT("agiLabel")), {
+            target: {value: "4000"},
+        });
+        fireEvent.change(
+            screen.getByLabelText(testT("studentOptionalTaxableScholarshipsLabel")),
+            {target: {value: "1000"}},
+        );
+
+        const latestCosts = onExpenseCostsChange.mock.calls.at(-1)?.[0] as
+            | Array<{ qualifiedExpenses: number; cost: number }>
+            | undefined;
+        expect(latestCosts).toBeDefined();
+
+        const baselineCost = latestCosts![0].cost;
+        const shifted1kCost = latestCosts![1000].cost;
+        expect(shifted1kCost - baselineCost).toBeGreaterThan(0);
+    });
+
     it("hides descendant controls when section hidden is true", () => {
         const {container} = render(
             <StudentSection
