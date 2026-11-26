@@ -3,10 +3,11 @@ import {Translator} from "./i18n.js";
 import {wrapNodes} from "./wrapNodes.js";
 import {FederalRules, FederalTaxYear, FilingStatus} from "../rules/federal.js";
 import {FILING_STATUS_LABEL_KEYS, FILING_STATUS_ORDER} from "./AotcDependentCalculator.js";
-import {IntegerInput} from "./IntegerInput.js";
+import {IntegerInput, valueRequired} from "./IntegerInput.js";
 import {HelpTooltip} from "./HelpTooltip.js";
 import {calculateTaxes, GrossIncome} from "../calc/calculateTaxes.js";
 import {areStudentExpenseCostsEqual, StudentExpenseCost} from "../calc/optimizeAotc.js";
+import {getFederalLineRevision} from "../rules/federalLines.js";
 
 export interface StudentSectionProps {
     studentNumber: number
@@ -84,11 +85,17 @@ export function StudentSection({
                                    onExpenseCostsChange,
                                    t,
                                }: StudentSectionProps) {
+    const federalLineRevision = getFederalLineRevision(taxYear)
+
     const headingId = useId();
     const nameInputId = useId();
     const [rawName, setRawName] = useState("");
     const filingStatusSelectId = useId();
     const [filingStatus, setFilingStatus] = useState<FilingStatus>("single");
+    const agiId = useId();
+    const [agi, setAgi] = useState<number | undefined>(undefined);
+    const ltcgId = useId();
+    const [ltcg, setLtcg] = useState<number | undefined>(undefined);
     const minTaxableScholarshipsId = useId();
     const [minTaxableScholarships, setMinTaxableScholarships] = useState<number | undefined>(undefined);
     const minEducationExpensesId = useId();
@@ -103,19 +110,25 @@ export function StudentSection({
     const lastEmittedCostsRef = useRef<StudentExpenseCost[]>([]);
 
     useEffect(() => {
-        const baseGrossIncome = {
-            claimedAsDependent: true,
-            agi: 20_000, // todo get as input
-            taxableScholarships: minTaxableScholarships ?? 0,
-        }
-        const nextPoints = computeStudentExpenseCosts({
-            taxYear,
-            expensesCap,
-            filingStatus,
-            baseGrossIncome: baseGrossIncome,
-            minEducationExpenses: minEducationExpenses ?? 0,
-            maxAdditionalScholarships: maxAdditionalScholarships ?? 0,
-        });
+        const nextPoints = (() => {
+            if (agi === undefined) {
+                return [];
+            }
+            const baseGrossIncome = {
+                claimedAsDependent: true,
+                agi: agi,
+                ltcg: ltcg,
+                taxableScholarships: minTaxableScholarships ?? 0,
+            }
+            return computeStudentExpenseCosts({
+                taxYear,
+                expensesCap,
+                filingStatus,
+                baseGrossIncome: baseGrossIncome,
+                minEducationExpenses: minEducationExpenses ?? 0,
+                maxAdditionalScholarships: maxAdditionalScholarships ?? 0,
+            });
+        })();
 
         if (!areStudentExpenseCostsEqual(lastEmittedCostsRef.current, nextPoints)) {
             lastEmittedCostsRef.current = nextPoints;
@@ -125,6 +138,8 @@ export function StudentSection({
         taxYear,
         expensesCap,
         filingStatus,
+        agi,
+        ltcg,
         minTaxableScholarships,
         minEducationExpenses,
         maxAdditionalScholarships,
@@ -164,6 +179,37 @@ export function StudentSection({
                         </option>
                     ))}
                 </select>
+            </div>,
+            <div key="agi">
+                <label htmlFor={agiId}>{t("agiLabel")}</label>
+                <span className="required-indicator" aria-hidden="true">*</span>
+                {" "}
+                <IntegerInput
+                    id={agiId}
+                    value={agi}
+                    onValueChange={setAgi}
+                    validator={valueRequired}
+                />
+                {" "}
+                <HelpTooltip
+                    t={t}
+                    lineRef={federalLineRevision.agi}
+                />
+            </div>,
+            <div key="ltcg">
+                <label htmlFor={ltcgId}>{t("ltcgLabel")}</label>
+                {" "}
+                <IntegerInput
+                    id={ltcgId}
+                    value={ltcg}
+                    allowNegative={true}
+                    onValueChange={setLtcg}
+                />
+                {" "}
+                <HelpTooltip
+                    t={t}
+                    lineRef={federalLineRevision.ltcg}
+                />
             </div>,
             <div key="taxable-scholarships">
                 <label htmlFor={minTaxableScholarshipsId}>{t("studentMinimumTaxableScholarshipsLabel")}</label>

@@ -10,6 +10,7 @@ export interface FormLineRef {
 
 export interface FederalLineRevision {
     agi: FormLineRef
+    ltcg: FormLineRef
     taxBeforeNonrefundableCredits: FormLineRef
     nonrefundableCredits: FormLineRef
 }
@@ -17,6 +18,7 @@ export interface FederalLineRevision {
 export const FEDERAL_LINE_REVISIONS: Record<number, FederalLineRevision> = {
     2026: {
         agi: {kind: "form", form: "1040", line: "11"},
+        ltcg: {kind: "form", form: "1040", line: "7a"},
         taxBeforeNonrefundableCredits: {kind: "form", form: "1040", line: "18"},
         nonrefundableCredits: {kind: "form", form: "1040", line: "21"},
     },

@@ -321,6 +321,10 @@ export function AotcDependentCalculator({
             );
         });
 
+        if (studentExpenseCosts.some((costs) => costs.length === 0)) {
+            suppressResults = true;
+        }
+
         if (!ignoreRest && !suppressResults) {
             sections.push(
                 <hr key={"results"}/>,

@@ -3,6 +3,8 @@ import {cleanup, fireEvent, render, screen} from "@testing-library/react";
 import {StudentSection} from "../../src/ui/StudentSection.js";
 import {getTranslator, Translator} from "../../src/ui/i18n.js";
 import {FILING_STATUS_LABEL_KEYS, FILING_STATUS_ORDER} from "../../src/ui/AotcDependentCalculator.js";
+import {makePigLatinTranslator} from "./pigLatin.js";
+import {getTooltipButtonForInput} from "./helpers.js";
 
 const testT: Translator = getTranslator("en-US");
 
@@ -119,62 +121,6 @@ describe("StudentSection", () => {
         expect(select).toHaveValue("hoh");
     });
 
-    it("defaults scholarship and education expense inputs to empty and updates each independently", () => {
-        render(
-            <StudentSection
-                {...DEFAULT_PROPS}
-                studentNumber={1}
-                hidden={false}
-                onNameChange={vi.fn()}
-                t={testT}
-            />,
-        );
-
-        const taxableScholarshipsInput = screen.getByLabelText(
-            testT("studentMinimumTaxableScholarshipsLabel"),
-        );
-        const educationExpensesInput = screen.getByLabelText(
-            testT("studentMinimumEducationExpensesLabel"),
-        );
-        const shiftableScholarshipsInput = screen.getByLabelText(
-            testT("studentOptionalTaxableScholarshipsLabel"),
-        );
-
-        expect(taxableScholarshipsInput).toHaveValue("");
-        expect(educationExpensesInput).toHaveValue("");
-        expect(shiftableScholarshipsInput).toHaveValue("");
-
-        fireEvent.change(taxableScholarshipsInput, {target: {value: "1,500"}});
-        fireEvent.change(educationExpensesInput, {target: {value: "4,200"}});
-        fireEvent.change(shiftableScholarshipsInput, {target: {value: "2,500"}});
-
-        expect(taxableScholarshipsInput).toHaveValue("1,500");
-        expect(educationExpensesInput).toHaveValue("4,200");
-        expect(shiftableScholarshipsInput).toHaveValue("2,500");
-
-        fireEvent.change(educationExpensesInput, {target: {value: ""}});
-        expect(taxableScholarshipsInput).toHaveValue("1,500");
-        expect(educationExpensesInput).toHaveValue("");
-        expect(shiftableScholarshipsInput).toHaveValue("2,500");
-    });
-
-    it("renders help tooltips for each scholarship and education expense input", () => {
-        render(
-            <StudentSection
-                {...DEFAULT_PROPS}
-                studentNumber={1}
-                hidden={false}
-                onNameChange={vi.fn()}
-                t={testT}
-            />,
-        );
-
-        const triggers = screen.getAllByRole("button", {
-            name: testT("helpTooltipDefaultTriggerLabel"),
-        });
-        expect(triggers).toHaveLength(3);
-    });
-
     it("hides descendant controls when section hidden is true", () => {
         const {container} = render(
             <StudentSection
@@ -198,4 +144,164 @@ describe("StudentSection", () => {
             screen.getByLabelText(testT("studentOptionalTaxableScholarshipsLabel")),
         ).toBeInTheDocument();
     });
+});
+
+type NumericLineFieldSpec = {
+    lineKey: string;
+    pigLatinLabel: string;
+    pigLatinTooltip: string;
+    required?: boolean;
+    allowNegative?: boolean;
+};
+
+const NUMERIC_LINE_FIELDS: readonly NumericLineFieldSpec[] = [
+    {
+        lineKey: "agi",
+        pigLatinLabel: "AGI-ay",
+        pigLatinTooltip: "Ormfay 1040 inelay",
+        required: true,
+    },
+    {
+        lineKey: "ltcg",
+        pigLatinLabel: "Onglay-ermtay apitalcay ainsgay",
+        pigLatinTooltip: "Ormfay 1040 inelay 7a",
+        allowNegative: true,
+    },
+    {
+        lineKey: "studentMinimumTaxableScholarships",
+        pigLatinLabel: "Axabletay olarshipsschay",
+        pigLatinTooltip: "Alreadyyay-axabletay olarshipschay incomeyay eforebay iftingshay anyyay axtay-eefray olarshipsschay",
+    },
+    {
+        lineKey: "studentMinimumEducationExpenses",
+        pigLatinLabel: "Ualifiedqay educationyay expensesyay",
+        pigLatinTooltip: "Otnay overedcay ybay axtay-eefray olarshipsschay eforebay iftingshay anyyay axtay-eefray olarshipsschay",
+    },
+    {
+        lineKey: "studentOptionalTaxableScholarships",
+        pigLatinLabel: "Iftableshay axtay-eefray olarshipsschay",
+        pigLatinTooltip: "Aximummay axtay-eefray olarshipsschay ichwhay ancay ebay appliedyay otay ualifiedqay educationyay expensesyay",
+    },
+];
+
+describe("StudentSection numeric line fields", () => {
+    it.each(NUMERIC_LINE_FIELDS)(
+        "renders $lineKey with required=$required and localized label/tooltip",
+        ({lineKey, pigLatinLabel, pigLatinTooltip, required = false}) => {
+            const pig = makePigLatinTranslator();
+            const labelKey = `${lineKey}Label` as Parameters<Translator>[0];
+            const {container} = render(
+                <StudentSection
+                    {...DEFAULT_PROPS}
+                    studentNumber={1}
+                    hidden={false}
+                    onNameChange={vi.fn()}
+                    t={pig}
+                />,
+            );
+
+            const input = screen.getByLabelText(pigLatinLabel);
+            expect(input).toBeInTheDocument();
+            expect(pig(labelKey)).toBe(pigLatinLabel);
+
+            const row = input.closest("div")!;
+            const asterisk = row.querySelector(".required-indicator");
+            if (required) {
+                expect(asterisk).not.toBeNull();
+                expect(asterisk).toHaveTextContent("*");
+                expect(asterisk).toHaveAttribute("aria-hidden", "true");
+            } else {
+                expect(asterisk).toBeNull();
+            }
+
+            const triggerLabel = pig("helpTooltipDefaultTriggerLabel");
+            const tooltipButton = getTooltipButtonForInput(container, input, triggerLabel);
+            fireEvent.focus(tooltipButton);
+
+            const tooltip = screen.getByRole("tooltip");
+            expect(tooltip).toHaveTextContent(pigLatinTooltip);
+        },
+    );
+
+    it.each(NUMERIC_LINE_FIELDS)(
+        "validates $lineKey on blur (required=$required) and formats values (allowNegative=$allowNegative)",
+        ({lineKey, required = false, allowNegative = false}) => {
+            const labelKey = `${lineKey}Label` as Parameters<Translator>[0];
+            render(
+                <StudentSection
+                    {...DEFAULT_PROPS}
+                    studentNumber={1}
+                    hidden={false}
+                    onNameChange={vi.fn()}
+                    t={testT}
+                />,
+            );
+
+            const input = screen.getByLabelText(testT(labelKey));
+            expect(input).toHaveValue("");
+            expect(input).not.toHaveAttribute("aria-invalid", "true");
+            expect(screen.queryByRole("alert")).toBeNull();
+
+            fireEvent.blur(input);
+            if (required) {
+                expect(input).toHaveAttribute("aria-invalid", "true");
+                expect(screen.getByRole("alert")).toHaveTextContent(testT("valueIsRequired"));
+            } else {
+                expect(input).not.toHaveAttribute("aria-invalid", "true");
+                expect(screen.queryByRole("alert")).toBeNull();
+            }
+
+            fireEvent.change(input, {target: {value: "4200"}});
+            expect(input).toHaveValue("4,200");
+            expect(input).not.toHaveAttribute("aria-invalid", "true");
+            expect(screen.queryByRole("alert")).toBeNull();
+
+            if (allowNegative) {
+                fireEvent.change(input, {target: {value: "-1500"}});
+                expect(input).toHaveValue("-1,500");
+            }
+        },
+    );
+
+    it.each(NUMERIC_LINE_FIELDS)(
+        "defaults $lineKey to empty and updates independently of other numeric line fields",
+        ({lineKey}) => {
+            const labelKey = `${lineKey}Label` as Parameters<Translator>[0];
+            render(
+                <StudentSection
+                    {...DEFAULT_PROPS}
+                    studentNumber={1}
+                    hidden={false}
+                    onNameChange={vi.fn()}
+                    t={testT}
+                />,
+            );
+
+            const targetInput = screen.getByLabelText(testT(labelKey));
+            const otherInputs = NUMERIC_LINE_FIELDS
+                .filter((field) => field.lineKey !== lineKey)
+                .map((field) =>
+                    screen.getByLabelText(
+                        testT(`${field.lineKey}Label` as Parameters<Translator>[0]),
+                    ),
+                );
+
+            expect(targetInput).toHaveValue("");
+            otherInputs.forEach((input) => {
+                expect(input).toHaveValue("");
+            });
+
+            fireEvent.change(targetInput, {target: {value: "2500"}});
+            expect(targetInput).toHaveValue("2,500");
+            otherInputs.forEach((input) => {
+                expect(input).toHaveValue("");
+            });
+
+            fireEvent.change(targetInput, {target: {value: ""}});
+            expect(targetInput).toHaveValue("");
+            otherInputs.forEach((input) => {
+                expect(input).toHaveValue("");
+            });
+        },
+    );
 });

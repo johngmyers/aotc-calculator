@@ -5,6 +5,7 @@ import {AotcDependentCalculator} from "../../src/ui/AotcDependentCalculator.js";
 import {makePigLatinTranslator} from "./pigLatin.js";
 import {FederalRules, FederalTaxYear} from "../../src/rules/federal.js";
 import {getFederalLineRevision} from "../../src/rules/federalLines.js";
+import {getTooltipButtonForInput} from "./helpers.js";
 
 afterEach(() => {
     cleanup();
@@ -930,7 +931,10 @@ describe("Student section", () => {
             />,
         );
 
-        fireEvent.change(screen.getByLabelText(pig("agiLabel")), {
+        const claimantRegion = screen.getByRole("region", {
+            name: pig("claimantSectionTitle"),
+        });
+        fireEvent.change(within(claimantRegion).getByLabelText(pig("agiLabel")), {
             target: {value: "500000"},
         });
 
@@ -945,28 +949,3 @@ describe("Student section", () => {
         ).toHaveAttribute("hidden");
     });
 });
-
-function getTooltipButtonForInput(
-    root: HTMLElement,
-    input: HTMLElement,
-    triggerName: string = EN_US_BUNDLE.helpTooltipDefaultTriggerLabel,
-): HTMLElement {
-    const containerDiv = input.closest("div");
-    if (!containerDiv) {
-        throw new Error("Input is not inside a div");
-    }
-
-    const matchingButtons = new Set(within(root).queryAllByRole("button", {name: triggerName}));
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    walker.currentNode = input;
-
-    let current = walker.nextNode() as HTMLElement | null;
-    while (current && containerDiv.contains(current)) {
-        if (current.tagName === "BUTTON" && matchingButtons.has(current)) {
-            return current;
-        }
-        current = walker.nextNode() as HTMLElement | null;
-    }
-
-    throw new Error(`Missing tooltip button "${triggerName}" within surrounding div`);
-}
