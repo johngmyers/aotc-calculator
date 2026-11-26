@@ -12,6 +12,7 @@ export const valueRequired: IntegerValidator = (value) =>
 export interface IntegerInputProps {
     id?: string;
     name?: string;
+    allowNegative?: boolean
     value?: number;
     onValueChange?: (value: number | undefined) => void;
     t?: Translator;
@@ -28,6 +29,7 @@ export interface IntegerInputProps {
 export function IntegerInput({
                                  id,
                                  name,
+                                 allowNegative,
                                  value,
                                  onValueChange,
                                  t = getTranslator(),
@@ -69,7 +71,7 @@ export function IntegerInput({
                 onBlur={() => setTouched(true)}
                 thousandSeparator=","
                 decimalScale={0}
-                allowNegative={false}
+                allowNegative={allowNegative ?? false}
                 disabled={disabled}
                 placeholder={placeholder}
                 aria-label={ariaLabel}

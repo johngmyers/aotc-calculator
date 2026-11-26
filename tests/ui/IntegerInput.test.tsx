@@ -16,6 +16,38 @@ afterEach(() => {
 });
 
 describe("IntegerInput validation", () => {
+    it("disallows negative values by default and allows them when allowNegative is true", () => {
+        function Harness() {
+            const [val, setVal] = useState<number | undefined>(undefined);
+            const [allowNeg, setAllowNeg] = useState(false);
+            const t = createTranslator(TEST_BUNDLE);
+            return (
+                <>
+                    <button type="button" onClick={() => setAllowNeg(true)}>
+                        Allow negative
+                    </button>
+                    <IntegerInput
+                        aria-label="Amount"
+                        t={t}
+                        value={val}
+                        onValueChange={setVal}
+                        allowNegative={allowNeg}
+                    />
+                </>
+            );
+        }
+
+        render(<Harness/>);
+        const input = screen.getByRole("textbox", {name: "Amount"});
+
+        fireEvent.change(input, {target: {value: "-500"}});
+        expect(input).toHaveValue("500");
+
+        fireEvent.click(screen.getByRole("button", {name: "Allow negative"}));
+        fireEvent.change(input, {target: {value: "-500"}});
+        expect(input).toHaveValue("-500");
+    });
+
     it("does not validate or show error before first blur", () => {
         const t = createTranslator(TEST_BUNDLE);
         render(
@@ -60,6 +92,7 @@ describe("IntegerInput validation", () => {
         expect(input).not.toHaveAttribute("aria-invalid", "true");
         expect(screen.queryByRole("alert")).toBeNull();
     });
+
     it("localizes validation messages and interpolates vars", () => {
         const cannotExceedAgi: IntegerValidator = (val) =>
             val !== undefined && val > 10000
