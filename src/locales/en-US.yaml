@@ -73,3 +73,6 @@ studentOptionalTaxableScholarshipsLabel: Shiftable tax-free scholarships
 studentOptionalTaxableScholarshipsTooltip: Maximum tax-free scholarships which can be applied to qualified education expenses
 cashGiftsToPublicCharitiesLabel: Cash gifts to public charities
 otherCharitableContributionsLabel: Other charitable contributions
+chartCostLabel: "Student's tax"
+chartCreditLabel: AOTC
+chartXAxisLabel: "Student's qualified expenses"

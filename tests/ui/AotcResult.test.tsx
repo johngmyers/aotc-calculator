@@ -205,4 +205,69 @@ describe("AotcResult", () => {
         expect(within(section).getAllByRole("listitem")[0].textContent).toContain("Bertie");
         expect(within(section).getAllByRole("listitem")[0].textContent).not.toContain("Honoria");
     });
+
+    it("renders a nested breakdown section and chart for each student", () => {
+        const props = defaultProps({
+            studentNames: ["Honoria", "Bertie"],
+            studentExpenseCosts: [
+                [
+                    {qualifiedExpenses: 0, cost: 0, outOfScopeForVITA: false},
+                    {qualifiedExpenses: 2_000, cost: 150, outOfScopeForVITA: false},
+                ],
+                [
+                    {qualifiedExpenses: 0, cost: 0, outOfScopeForVITA: false},
+                    {qualifiedExpenses: 4_000, cost: 300, outOfScopeForVITA: false},
+                ],
+            ],
+        });
+
+        render(<AotcResult {...props} />);
+
+        const outerSection = screen.getByRole("region", {name: "Esultsray"});
+        const honoriaHeading = within(outerSection).getByRole("heading", {level: 3, name: "Honoria"});
+        const bertieHeading = within(outerSection).getByRole("heading", {level: 3, name: "Bertie"});
+
+        expect(honoriaHeading.closest("section")).toBeTruthy();
+        expect(bertieHeading.closest("section")).toBeTruthy();
+        expect(honoriaHeading.closest("section")).not.toBe(bertieHeading.closest("section"));
+        expect(outerSection.querySelectorAll(".recharts-responsive-container")).toHaveLength(2);
+    });
+
+    it("handles an empty student list cleanly", () => {
+        const setOptimalAotcInputs = vi.fn<(nextInputs: AotcInput) => void>();
+        const props = defaultProps({
+            studentNames: [],
+            studentExpenseCosts: [],
+            setOptimalAotcInputs,
+        });
+
+        render(<AotcResult {...props} />);
+
+        const section = screen.getByRole("region", {name: "Esultsray"});
+        expect(within(section).queryAllByRole("listitem")).toHaveLength(0);
+        expect(within(section).queryAllByRole("heading", {level: 3})).toHaveLength(0);
+        expect(section.textContent).toContain("Usableyay AOTC-ay: $0");
+        expect(section.textContent).toContain("Otaltay incrementalyay ostcay: $0");
+        expect(section.textContent).toContain("Etnay enefitbay: $0");
+        expect(setOptimalAotcInputs).toHaveBeenCalledTimes(1);
+        expect(setOptimalAotcInputs).toHaveBeenLastCalledWith({
+            agi: 80_000,
+            refundableIneligible: false,
+            students: [],
+        });
+    });
+
+    it("does not re-emit optimal AOTC inputs when only studentNames changes", () => {
+        const setOptimalAotcInputs = vi.fn<(nextInputs: AotcInput) => void>();
+        const props = defaultProps({
+            studentNames: ["Honoria"],
+            setOptimalAotcInputs,
+        });
+
+        const {rerender} = render(<AotcResult {...props} />);
+        expect(setOptimalAotcInputs).toHaveBeenCalledTimes(1);
+
+        rerender(<AotcResult {...props} studentNames={["Bertie"]}/>);
+        expect(setOptimalAotcInputs).toHaveBeenCalledTimes(1);
+    });
 });

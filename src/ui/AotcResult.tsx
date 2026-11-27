@@ -3,6 +3,7 @@ import {type AotcInput, calculateAotc, type FederalTaxRules} from "../calc/calcu
 import {optimizeAotc, type StudentExpenseCost} from "../calc/optimizeAotc.js";
 import {formatWholeDollars} from "./formatWholeDollars.js";
 import type {Translator} from "./i18n.js";
+import {StudentCostChart, type StudentCostChartPoint} from "./StudentCostChart.js";
 
 export type AotcResultProps = {
     stayWithinVitaScope: boolean;
@@ -16,6 +17,22 @@ export type AotcResultProps = {
     setOptimalAotcInputs: (nextInputs: AotcInput) => void;
     t: Translator;
 };
+
+type StudentBreakdownProps = {
+    studentName: string;
+    costChartPoints: readonly StudentCostChartPoint[];
+    t: Translator;
+};
+
+function StudentBreakdownSection({studentName, costChartPoints, t}: StudentBreakdownProps) {
+    const subsectionId = useId();
+    return (
+        <section aria-labelledby={subsectionId}>
+            <h3 id={subsectionId}>{studentName}</h3>
+            <StudentCostChart points={costChartPoints} t={t}/>
+        </section>
+    );
+}
 
 export function AotcResult({
                                stayWithinVitaScope,
@@ -70,11 +87,39 @@ export function AotcResult({
             const baseCost = baseline && !("errorCode" in baseline) ? baseline.cost : 0;
             const chosenCost = chosen && !("errorCode" in chosen) ? chosen.cost : 0;
 
+            const costChartPoints: StudentCostChartPoint[] = candidates.map((studentExpenseCost) => {
+                if ("errorCode" in studentExpenseCost) {
+                    return {
+                        qualifiedExpenses: studentExpenseCost.qualifiedExpenses,
+                        cost: 0,
+                        credit: 0,
+                        outOfScopeForVITA: true,
+                    };
+                }
+                const pointInput: AotcInput = {
+                    ...optimalInput,
+                    students: optimalInput.students.map((value, optIdx) =>
+                        i === optIdx ? {qualifiedExpenses: studentExpenseCost.qualifiedExpenses} : value,
+                    ),
+                };
+                const pointAotcResult = calculateAotc(claimantTaxRules, pointInput);
+                const pointUsableCredit =
+                    pointAotcResult.refundableCredit +
+                    Math.min(usableTaxHeadroom, pointAotcResult.nonrefundableCredit);
+                return {
+                    qualifiedExpenses: studentExpenseCost.qualifiedExpenses,
+                    cost: studentExpenseCost.cost,
+                    credit: pointUsableCredit,
+                    outOfScopeForVITA: studentExpenseCost.outOfScopeForVITA,
+                };
+            });
+
             return {
                 studentName: studentNames[i],
                 qualifiedExpenses: optStudent.qualifiedExpenses,
                 cost: chosenCost,
                 incrementalCost: chosenCost - baseCost,
+                costChartPoints,
             };
         });
 
@@ -110,12 +155,12 @@ export function AotcResult({
         }
         lastEmittedInputsKeyRef.current = serialized;
         setOptimalAotcInputs(evaluation.optimalInput);
-    }, [evaluation, claimantTaxRules, setOptimalAotcInputs]);
+    }, [evaluation.optimalInput, claimantTaxRules, setOptimalAotcInputs]);
 
     return (
         <section aria-labelledby={headingId}>
-            <h2 id={headingId}>
-                <center>{t("resultsSectionTitle")}</center>
+            <h2 id={headingId} style={{textAlign: "center"}}>
+                {t("resultsSectionTitle")}
             </h2>
             <ul>
                 {evaluation.perStudent.map((student, idx) => (
@@ -143,6 +188,14 @@ export function AotcResult({
                     {t("resultsNetBenefit")}: {formatWholeDollars(evaluation.netBenefit)}
                 </p>
             </div>
+            {evaluation.perStudent.map((student, idx) => (
+                <StudentBreakdownSection
+                    key={idx}
+                    studentName={student.studentName}
+                    costChartPoints={student.costChartPoints}
+                    t={t}
+                />
+            ))}
         </section>
     );
 }
