@@ -1,11 +1,10 @@
-import {EN_US_BUNDLE} from "../../src/ui/i18n.js";
 import {within} from "@testing-library/react";
 
-export function getTooltipButtonForInput(
+export function tryGetTooltipButtonForInput(
     root: HTMLElement,
     input: HTMLElement,
-    triggerName: string = EN_US_BUNDLE.helpTooltipDefaultTriggerLabel,
-): HTMLElement {
+    triggerName: string,
+): HTMLElement | undefined {
     const containerDiv = input.closest("div");
     if (!containerDiv) {
         throw new Error("Input is not inside a div");
@@ -23,5 +22,19 @@ export function getTooltipButtonForInput(
         current = walker.nextNode() as HTMLElement | null;
     }
 
-    throw new Error(`Missing tooltip button "${triggerName}" within surrounding div`);
+    return undefined;
+}
+
+export function getTooltipButtonForInput(
+    root: HTMLElement,
+    input: HTMLElement,
+    triggerName: string,
+): HTMLElement {
+    const result = tryGetTooltipButtonForInput(root, input, triggerName);
+
+    if (result === undefined) {
+        throw new Error(`Missing tooltip button "${triggerName}" within surrounding div`);
+    }
+
+    return result;
 }

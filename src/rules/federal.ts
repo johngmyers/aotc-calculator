@@ -226,11 +226,23 @@ const LTCG_BRACKETS_2027: Record<FilingStatus, TaxBrackets> = {
     hoh: LTCG_BRACKETS_2027_HOH,
 } as const;
 
+const NON_ITEMIZER_CASH_CHARITABLE_CAP_BY_STATUS_2026: Record<FilingStatus, number> = {
+    single: 1000,
+    mfs: 1000,
+    hoh: 1000,
+    mfj: 2000,
+    qss: 2000,
+} as const;
+
 interface YearSharedConfig {
     aotcByStatus: Partial<Record<FilingStatus, AotcRules>>;
     capitalGainsBracketsByStatus: Record<FilingStatus, TaxBrackets>;
     dependentStandardDeduction: NonNullable<TaxRules["dependentStandardDeduction"]>;
     kiddieTax: NonNullable<TaxRules["kiddieTax"]>;
+    medicalDeductionThresholdRate: number;
+    charitableDeductionThresholdRate: number;
+    miscellaneousDeductionThresholdRate: number;
+    nonItemizerCashCharitableDeductionCapByStatus: Record<FilingStatus, number>;
     saltCap?: number;
 }
 
@@ -240,12 +252,20 @@ const YEAR_SHARED_CONFIG: Record<FederalTaxYear, YearSharedConfig> = {
         capitalGainsBracketsByStatus: LTCG_BRACKETS_2026,
         dependentStandardDeduction: { base: 1350, earnedAddOn: 450 },
         kiddieTax: { unearnedIncomeThreshold: 2700, itemizedBase: 1350 },
+        medicalDeductionThresholdRate: 0.075,
+        charitableDeductionThresholdRate: 0.005,
+        miscellaneousDeductionThresholdRate: Infinity,
+        nonItemizerCashCharitableDeductionCapByStatus: NON_ITEMIZER_CASH_CHARITABLE_CAP_BY_STATUS_2026,
     },
     2027: {
         aotcByStatus: AOTC_RULES_BY_STATUS_2009,
         capitalGainsBracketsByStatus: LTCG_BRACKETS_2027,
         dependentStandardDeduction: { base: 1400, earnedAddOn: 500 },
         kiddieTax: { unearnedIncomeThreshold: 2800, itemizedBase: 1400 },
+        medicalDeductionThresholdRate: 0.075,
+        charitableDeductionThresholdRate: 0.005,
+        miscellaneousDeductionThresholdRate: Infinity,
+        nonItemizerCashCharitableDeductionCapByStatus: NON_ITEMIZER_CASH_CHARITABLE_CAP_BY_STATUS_2026,
     },
 } as const;
 
@@ -264,6 +284,10 @@ function buildYearRules(
             standardDeduction: standardDeductionByStatus[status],
             dependentStandardDeduction: shared.dependentStandardDeduction,
             kiddieTax: shared.kiddieTax,
+            medicalDeductionThresholdRate: shared.medicalDeductionThresholdRate,
+            charitableDeductionThresholdRate: shared.charitableDeductionThresholdRate,
+            miscellaneousDeductionThresholdRate: shared.miscellaneousDeductionThresholdRate,
+            nonItemizerCashCharitableDeductionCap: shared.nonItemizerCashCharitableDeductionCapByStatus[status],
             saltCap: shared.saltCap,
         };
         return [status, rules] as const;

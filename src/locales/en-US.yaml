@@ -34,6 +34,7 @@ filingStatusMfj: Married Filing Jointly
 filingStatusMfs: Married Filing Separately
 filingStatusQss: Qualifying Surviving Spouse
 aotcDisallowedByFilingStatus: AOTC is disallowed by filing status.
+spouseItemizesDeductionsLabel: Spouse itemizes deductions
 ageLabel: "Age at end of tax year"
 ageBracketUnder18: "0-17"
 ageBracket18: "18"
@@ -70,3 +71,5 @@ studentMinimumEducationExpensesLabel: Qualified education expenses
 studentMinimumEducationExpensesTooltip: Not covered by tax-free scholarships before shifting any tax-free scholarships
 studentOptionalTaxableScholarshipsLabel: Shiftable tax-free scholarships
 studentOptionalTaxableScholarshipsTooltip: Maximum tax-free scholarships which can be applied to qualified education expenses
+cashGiftsToPublicCharitiesLabel: Cash gifts to public charities
+otherCharitableContributionsLabel: Other charitable contributions

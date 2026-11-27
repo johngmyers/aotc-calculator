@@ -93,6 +93,7 @@ export function StudentSection({
     const [rawName, setRawName] = useState("");
     const filingStatusSelectId = useId();
     const [filingStatus, setFilingStatus] = useState<FilingStatus>("single");
+    const [spouseItemizesDeductions, setSpouseItemizesDeductions] = useState(false);
     const agiId = useId();
     const [agi, setAgi] = useState<number | undefined>(undefined);
     const earnedIncomeId = useId();
@@ -105,6 +106,10 @@ export function StudentSection({
     const [minEducationExpenses, setMinEducationExpenses] = useState<number | undefined>(undefined);
     const maxAdditionalScholarshipsId = useId();
     const [maxAdditionalScholarships, setMaxAdditionalScholarships] = useState<number | undefined>(undefined);
+    const cashGiftsToPublicCharitiesId = useId();
+    const [cashGiftsToPublicCharities, setCashGiftsToPublicCharities] = useState<number | undefined>(undefined);
+    const otherCharitableContributionsId = useId();
+    const [otherCharitableContributions, setOtherCharitableContributions] = useState<number | undefined>(undefined);
 
     useEffect(() => {
         onNameChange(getEffectiveStudentName(rawName, studentNumber, t));
@@ -122,6 +127,9 @@ export function StudentSection({
                 agi: agi,
                 ltcg: ltcg,
                 earnedIncome: earnedIncome,
+                cashGiftsToPublicCharities: cashGiftsToPublicCharities,
+                otherCharitableContributions: otherCharitableContributions,
+                mustItemize: filingStatus === "mfs" && spouseItemizesDeductions,
                 taxableScholarships: minTaxableScholarships ?? 0,
             }
             return computeStudentExpenseCosts({
@@ -142,12 +150,15 @@ export function StudentSection({
         taxYear,
         expensesCap,
         filingStatus,
+        spouseItemizesDeductions,
         agi,
         earnedIncome,
         ltcg,
         minTaxableScholarships,
         minEducationExpenses,
         maxAdditionalScholarships,
+        cashGiftsToPublicCharities,
+        otherCharitableContributions,
         onExpenseCostsChange,
     ]);
 
@@ -184,6 +195,16 @@ export function StudentSection({
                         </option>
                     ))}
                 </select>
+            </div>,
+            <div key="spouse-itemizes" hidden={filingStatus !== "mfs"}>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={spouseItemizesDeductions}
+                        onChange={(e) => setSpouseItemizesDeductions(e.target.checked)}
+                    />
+                    {t("spouseItemizesDeductionsLabel")}
+                </label>
             </div>,
             <div key="agi">
                 <label htmlFor={agiId}>{t("agiLabel")}</label>
@@ -262,6 +283,24 @@ export function StudentSection({
                 />
                 {" "}
                 <HelpTooltip t={t} textKey="studentOptionalTaxableScholarshipsTooltip"/>
+            </div>,
+            <div key="cash-public-charities">
+                <label htmlFor={cashGiftsToPublicCharitiesId}>{t("cashGiftsToPublicCharitiesLabel")}</label>
+                {" "}
+                <IntegerInput
+                    id={cashGiftsToPublicCharitiesId}
+                    value={cashGiftsToPublicCharities}
+                    onValueChange={setCashGiftsToPublicCharities}
+                />
+            </div>,
+            <div key="other-charitable-contributions">
+                <label htmlFor={otherCharitableContributionsId}>{t("otherCharitableContributionsLabel")}</label>
+                {" "}
+                <IntegerInput
+                    id={otherCharitableContributionsId}
+                    value={otherCharitableContributions}
+                    onValueChange={setOtherCharitableContributions}
+                />
             </div>,
         ],
     );
