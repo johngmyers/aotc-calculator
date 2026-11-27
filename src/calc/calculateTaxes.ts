@@ -65,10 +65,10 @@ export interface GrossIncome {
     otherCharitableContributions?: number
 
     mustItemize?: boolean
-    itemizedMedicalDeductions?: number
-    itemizedMiscellaneousDeductions?: number
-    itemizedSaltDeductions?: number
-    itemizedOtherDeductions?: number
+    medicalExpenses?: number
+    miscellaneousExpenses?: number
+    salt?: number
+    otherItemizedExpenses?: number
 
     // Below are only used if claimedAsDependent is true
     earnedIncome?: number
@@ -142,25 +142,25 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
     let itemizedDeduction = 0;
 
     if (!(rules.disallowItemizedDeductions ?? false)) {
-        if (grossIncome.itemizedMedicalDeductions) {
+        if (grossIncome.medicalExpenses) {
             const phaseout = phaseoutDeduction(rules, grossIncome, rules.medicalDeductionThresholdRate);
             if (typeof (phaseout) !== 'number') {
                 return phaseout;
             }
-            itemizedDeduction += Math.max(0, grossIncome.itemizedMedicalDeductions - phaseout);
+            itemizedDeduction += Math.max(0, grossIncome.medicalExpenses - phaseout);
         }
 
-        if (grossIncome.itemizedMiscellaneousDeductions) {
+        if (grossIncome.miscellaneousExpenses) {
             const phaseout = phaseoutDeduction(rules, grossIncome, rules.miscellaneousDeductionThresholdRate);
             if (typeof (phaseout) !== 'number') {
                 return phaseout;
             }
-            itemizedDeduction += Math.max(0, grossIncome.itemizedMiscellaneousDeductions - phaseout);
+            itemizedDeduction += Math.max(0, grossIncome.miscellaneousExpenses - phaseout);
         }
 
-        if (grossIncome.itemizedSaltDeductions) {
+        if (grossIncome.salt) {
             const saltCap = rules.saltCap ?? Infinity;
-            itemizedDeduction += Math.min(grossIncome.itemizedSaltDeductions, saltCap);
+            itemizedDeduction += Math.min(grossIncome.salt, saltCap);
         }
 
         const itemizedCharitableDeductions = (grossIncome.cashGiftsToPublicCharities ?? 0) + (grossIncome.otherCharitableContributions ?? 0);
@@ -172,7 +172,7 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
             itemizedDeduction += Math.max(0, itemizedCharitableDeductions - phaseout);
         }
 
-        itemizedDeduction += grossIncome.itemizedOtherDeductions ?? 0;
+        itemizedDeduction += grossIncome.otherItemizedExpenses ?? 0;
     }
 
     const deduction = Math.max(standardDeduction, itemizedDeduction);

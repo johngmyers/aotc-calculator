@@ -351,6 +351,98 @@ describe("StudentSection", () => {
         expect(latestCosts![0].cost).toBe(2032);
         expect(latestCosts![1000].cost).toBe(2153);
     });
+
+    it("emits an empty expense cost array when AGI is cleared after being set", () => {
+        const onExpenseCostsChange = vi.fn();
+
+        render(
+            <StudentSection
+                {...DEFAULT_PROPS}
+                studentNumber={1}
+                hidden={false}
+                onNameChange={vi.fn()}
+                onExpenseCostsChange={onExpenseCostsChange}
+                t={testT}
+            />,
+        );
+
+        const agiInput = screen.getByLabelText(testT("agiLabel"));
+        fireEvent.change(agiInput, {target: {value: "25000"}});
+        expect((onExpenseCostsChange.mock.calls.at(-1)?.[0] as unknown[]).length).toBeGreaterThan(0);
+
+        fireEvent.change(agiInput, {target: {value: ""}});
+        expect(onExpenseCostsChange).toHaveBeenLastCalledWith([]);
+    });
+
+    it("caps generated expense cost points at expensesCap even when optional scholarships are higher", () => {
+        const onExpenseCostsChange = vi.fn();
+
+        render(
+            <StudentSection
+                {...DEFAULT_PROPS}
+                expensesCap={250}
+                studentNumber={1}
+                hidden={false}
+                onNameChange={vi.fn()}
+                onExpenseCostsChange={onExpenseCostsChange}
+                t={testT}
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText(testT("agiLabel")), {target: {value: "20000"}});
+        fireEvent.change(
+            screen.getByLabelText(testT("studentOptionalTaxableScholarshipsLabel")),
+            {target: {value: "1000"}},
+        );
+
+        const latestCosts = onExpenseCostsChange.mock.calls.at(-1)?.[0] as
+            | Array<{ qualifiedExpenses: number; cost: number }>
+            | undefined;
+        expect(latestCosts).toHaveLength(251);
+        expect(latestCosts!.at(-1)?.qualifiedExpenses).toBe(250);
+    });
+
+    it("passes medicalExpenses and salt into tax calculations when itemizing", () => {
+        const onExpenseCostsChange = vi.fn();
+
+        render(
+            <StudentSection
+                {...DEFAULT_PROPS}
+                taxYear={2026}
+                expensesCap={4_000}
+                studentNumber={1}
+                hidden={false}
+                onNameChange={vi.fn()}
+                onExpenseCostsChange={onExpenseCostsChange}
+                t={testT}
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText(testT("filingStatusLabel")), {target: {value: "mfs"}});
+        fireEvent.click(screen.getByLabelText(testT("spouseItemizesDeductionsLabel")));
+        fireEvent.change(screen.getByLabelText(testT("agiLabel")), {target: {value: "20000"}});
+        fireEvent.change(
+            screen.getByLabelText(testT("studentOptionalTaxableScholarshipsLabel")),
+            {target: {value: "1000"}},
+        );
+
+        const baselineNoItemized = onExpenseCostsChange.mock.calls.at(-1)?.[0] as
+            | Array<{ qualifiedExpenses: number; cost: number }>
+            | undefined;
+        expect(baselineNoItemized).toBeDefined();
+
+        // Add pre-floor medical expenses (7.5% of $20,000 = $1,500 floor; $3,500 -> $2,000 deduction)
+        // and SALT ($2,000), lowering tax below the no-itemized baseline.
+        fireEvent.change(screen.getByLabelText(testT("medicalExpensesLabel")), {target: {value: "3500"}});
+        fireEvent.change(screen.getByLabelText(testT("saltLabel")), {target: {value: "2000"}});
+
+        const withItemized = onExpenseCostsChange.mock.calls.at(-1)?.[0] as
+            | Array<{ qualifiedExpenses: number; cost: number }>
+            | undefined;
+        expect(withItemized).toBeDefined();
+        expect(withItemized![0].cost).toBeLessThan(baselineNoItemized![0].cost);
+        expect(withItemized![1000].cost).toBeGreaterThan(withItemized![0].cost);
+    });
 });
 
 type NumericLineFieldSpec = {
@@ -401,6 +493,16 @@ const NUMERIC_LINE_FIELDS: readonly NumericLineFieldSpec[] = [
     {
         lineKey: "otherCharitableContributions",
         pigLatinLabel: "Otheryay aritablechay ontributionscay",
+    },
+    {
+        lineKey: "medicalExpenses",
+        pigLatinLabel: "Edicalmay andyay entalday expensesyay",
+        pigLatinTooltip: "Eduleschay A inelay 1",
+    },
+    {
+        lineKey: "salt",
+        pigLatinLabel: "Atestay andyay ocallay axestay",
+        pigLatinTooltip: "Eduleschay A inelay 5d",
     },
 ];
 

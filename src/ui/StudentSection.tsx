@@ -110,6 +110,10 @@ export function StudentSection({
     const [cashGiftsToPublicCharities, setCashGiftsToPublicCharities] = useState<number | undefined>(undefined);
     const otherCharitableContributionsId = useId();
     const [otherCharitableContributions, setOtherCharitableContributions] = useState<number | undefined>(undefined);
+    const medicalExpensesId = useId();
+    const [medicalExpenses, setMedicalExpenses] = useState<number | undefined>(undefined);
+    const saltId = useId();
+    const [salt, setSalt] = useState<number | undefined>(undefined);
 
     useEffect(() => {
         onNameChange(getEffectiveStudentName(rawName, studentNumber, t));
@@ -129,6 +133,8 @@ export function StudentSection({
                 earnedIncome: earnedIncome,
                 cashGiftsToPublicCharities: cashGiftsToPublicCharities,
                 otherCharitableContributions: otherCharitableContributions,
+                medicalExpenses: medicalExpenses,
+                salt: salt,
                 mustItemize: filingStatus === "mfs" && spouseItemizesDeductions,
                 taxableScholarships: minTaxableScholarships ?? 0,
             }
@@ -159,6 +165,8 @@ export function StudentSection({
         maxAdditionalScholarships,
         cashGiftsToPublicCharities,
         otherCharitableContributions,
+        medicalExpenses,
+        salt,
         onExpenseCostsChange,
     ]);
 
@@ -300,6 +308,34 @@ export function StudentSection({
                     id={otherCharitableContributionsId}
                     value={otherCharitableContributions}
                     onValueChange={setOtherCharitableContributions}
+                />
+            </div>,
+            <div key="medical-expenses">
+                <label htmlFor={medicalExpensesId}>{t("medicalExpensesLabel")}</label>
+                {" "}
+                <IntegerInput
+                    id={medicalExpensesId}
+                    value={medicalExpenses}
+                    onValueChange={setMedicalExpenses}
+                />
+                {" "}
+                <HelpTooltip
+                    t={t}
+                    lineRefs={federalLineRevision.medicalExpenses}
+                />
+            </div>,
+            <div key="salt">
+                <label htmlFor={saltId}>{t("saltLabel")}</label>
+                {" "}
+                <IntegerInput
+                    id={saltId}
+                    value={salt}
+                    onValueChange={setSalt}
+                />
+                {" "}
+                <HelpTooltip
+                    t={t}
+                    lineRefs={federalLineRevision.salt}
                 />
             </div>,
         ],

@@ -11,6 +11,8 @@ export interface FormLineRef {
 export interface FederalLineRevision {
     agi: readonly FormLineRef[]
     ltcg: readonly FormLineRef[]
+    medicalExpenses: readonly FormLineRef[]
+    salt: readonly FormLineRef[]
     taxBeforeNonrefundableCredits: readonly FormLineRef[]
     nonrefundableCredits: readonly FormLineRef[]
 }
@@ -24,6 +26,12 @@ export const FEDERAL_LINE_REVISIONS: Record<number, FederalLineRevision> = {
         ltcg: [
             {kind: "form", form: "1040", line: "7a"},
             {kind: "form", form: "1040-SR", line: "7a"},
+        ],
+        medicalExpenses: [
+            {kind: "schedule", form: "A", line: "1"},
+        ],
+        salt: [
+            {kind: "schedule", form: "A", line: "5d"},
         ],
         taxBeforeNonrefundableCredits: [
             {kind: "form", form: "1040", line: "18"},

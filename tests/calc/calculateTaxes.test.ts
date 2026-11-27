@@ -433,7 +433,7 @@ describe('calculateTaxes - Capital Gains Brackets & Income Stacking', () => {
     });
 });
 
-describe('calculateTaxes - itemizedMedicalDeductions', () => {
+describe('calculateTaxes - medicalExpenses', () => {
     it('calculates deductible medical expenses above AGI floor without standard deduction interference', () => {
         const rules: TaxRules = {
             standardDeduction: 0,
@@ -446,7 +446,7 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
         // Taxable income = $19,999 - $6,000 = $13,999.
         const result = calculateTaxes(rules, {
             agi: 19999,
-            itemizedMedicalDeductions: 16000,
+            medicalExpenses: 16000,
         });
         expect(result.taxableIncome).toBe(13999);
     });
@@ -464,7 +464,7 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
         // Taxable income = $20,000 - $5,000 = $15,000.
         const result = calculateTaxes(rules, {
             agi: 20000,
-            itemizedMedicalDeductions: 12000,
+            medicalExpenses: 12000,
         });
         expect(result.taxableIncome).toBe(15000);
     });
@@ -483,7 +483,7 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
         const result = calculateTaxes(rules, {
             agi: 30000,
             federalAgi: 20000,
-            itemizedMedicalDeductions: 16000,
+            medicalExpenses: 16000,
         });
         expect(result.taxableIncome).toBe(24000);
     });
@@ -498,7 +498,7 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
 
         const result = calculateTaxes(rules, {
             agi: 30000,
-            itemizedMedicalDeductions: 16000,
+            medicalExpenses: 16000,
         });
 
         expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
@@ -513,7 +513,7 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
 
         const result = calculateTaxes(rules, {
             agi: 30000,
-            itemizedMedicalDeductions: 16000,
+            medicalExpenses: 16000,
         });
 
         expect('errorCode' in result).toBe(false);
@@ -532,7 +532,7 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
         // Taxable income = $20,000 - $0 = $20,000 -> tax = $2,000.
         const result = calculateTaxes(rules, {
             agi: 20000,
-            itemizedMedicalDeductions: 50000,
+            medicalExpenses: 50000,
         });
 
         expect(result.taxableIncome).toBe(20000);
@@ -547,7 +547,7 @@ describe('calculateTaxes - itemizedMedicalDeductions', () => {
 
         const result = calculateTaxes(flatTaxRules, {
             agi: 30000,
-            itemizedMedicalDeductions: 5000,
+            medicalExpenses: 5000,
         });
         expect(result.taxableIncome).toBe(30000);
         expect(result.tax).toBe(1500);
@@ -568,7 +568,7 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
         // Taxable income = $19,999 - $6,000 = $13,999.
         const result = calculateTaxes(rules, {
             agi: 19999,
-            itemizedMiscellaneousDeductions: 16000,
+            miscellaneousExpenses: 16000,
         });
         expect(result.taxableIncome).toBe(13999);
     });
@@ -585,7 +585,7 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
         // Taxable income = $20,000 - $5,000 = $15,000.
         const result = calculateTaxes(rules, {
             agi: 20000,
-            itemizedMiscellaneousDeductions: 12000,
+            miscellaneousExpenses: 12000,
         });
         expect(result.taxableIncome).toBe(15000);
     });
@@ -604,7 +604,7 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
         const result = calculateTaxes(rules, {
             agi: 30000,
             federalAgi: 20000,
-            itemizedMiscellaneousDeductions: 16000,
+            miscellaneousExpenses: 16000,
         });
         expect(result.taxableIncome).toBe(24000);
     });
@@ -619,7 +619,7 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
 
         const result = calculateTaxes(rules, {
             agi: 30000,
-            itemizedMiscellaneousDeductions: 16000,
+            miscellaneousExpenses: 16000,
         });
 
         expect(result.errorCode).toBe('MISSING_FEDERAL_AGI');
@@ -634,7 +634,7 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
 
         const result = calculateTaxes(rules, {
             agi: 30000,
-            itemizedMiscellaneousDeductions: 16000,
+            miscellaneousExpenses: 16000,
         });
 
         expect('errorCode' in result).toBe(false);
@@ -650,7 +650,7 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
 
         const result = calculateTaxes(rules, {
             agi: 20000,
-            itemizedMiscellaneousDeductions: 50000,
+            miscellaneousExpenses: 50000,
         });
 
         expect(result.taxableIncome).toBe(20000);
@@ -665,7 +665,7 @@ describe('calculateTaxes - miscellaneousDeductions', () => {
 
         const result = calculateTaxes(flatTaxRules, {
             agi: 30000,
-            itemizedMiscellaneousDeductions: 5000,
+            miscellaneousExpenses: 5000,
         });
         expect(result.taxableIncome).toBe(30000);
         expect(result.tax).toBe(1500);
@@ -684,7 +684,7 @@ describe('calculateTaxes - itemized SALT deductions', () => {
         // Taxable income = $30,000 - $10,000 = $20,000.
         const result = calculateTaxes(rules, {
             agi: 30000,
-            itemizedSaltDeductions: 14000,
+            salt: 14000,
         });
         expect(result.taxableIncome).toBe(20000);
         expect(result.tax).toBe(2000);
@@ -699,7 +699,7 @@ describe('calculateTaxes - itemized SALT deductions', () => {
 
         const oneOverCap = calculateTaxes(rules, {
             agi: 25000,
-            itemizedSaltDeductions: 10001,
+            salt: 10001,
         });
         expect(oneOverCap.taxableIncome).toBe(15000);
     });
@@ -713,7 +713,7 @@ describe('calculateTaxes - itemized SALT deductions', () => {
         // Taxable income = $30,000 - $14,000 = $16,000.
         const result = calculateTaxes(rules, {
             agi: 30000,
-            itemizedSaltDeductions: 14000,
+            salt: 14000,
         });
         expect(result.taxableIncome).toBe(16000);
         expect(result.tax).toBe(1600);
@@ -728,7 +728,7 @@ describe('calculateTaxes - itemized SALT deductions', () => {
 
         const result = calculateTaxes(rules, {
             agi: 20000,
-            itemizedSaltDeductions: 5000,
+            salt: 5000,
         });
         expect(result.taxableIncome).toBe(20000);
         expect(result.tax).toBe(2000);
@@ -746,7 +746,7 @@ describe('calculateTaxes - itemized SALT deductions', () => {
         // Taxable income = $25,000 - $12,000 = $13,000.
         const result = calculateTaxes(rules, {
             agi: 25000,
-            itemizedSaltDeductions: 14000,
+            salt: 14000,
         });
         expect(result.taxableIncome).toBe(13000);
         expect(result.tax).toBe(1300);
@@ -764,7 +764,7 @@ describe('calculateTaxes - itemized SALT deductions', () => {
         // Taxable income = $20,000 - $10,000 = $10,000.
         const result = calculateTaxes(dependentRules, {
             agi: 20000,
-            itemizedSaltDeductions: 12000,
+            salt: 12000,
         });
         expect(result.taxableIncome).toBe(10000);
         expect(result.tax).toBe(1000);
@@ -779,7 +779,7 @@ describe('calculateTaxes - itemized SALT deductions', () => {
 
         const result = calculateTaxes(flatTaxRules, {
             agi: 30000,
-            itemizedSaltDeductions: 5000,
+            salt: 5000,
         });
         expect(result.taxableIncome).toBe(30000);
         expect(result.tax).toBe(1500);
@@ -811,13 +811,13 @@ describe('calculateTaxes - charitableContributions', () => {
         // AGI = $20,000 -> 0.5% floor = round(20,000 * 0.005) = $100.
         // Total charitable = $3,000 cash + $2,100 other = $5,100.
         // Deductible charitable = max(0, $5,100 - $100) = $5,000.
-        // Plus itemizedOtherDeductions = $7,000 -> total itemized = $12,000 (> $10,000 standard deduction).
+        // Plus otherItemizedExpenses = $7,000 -> total itemized = $12,000 (> $10,000 standard deduction).
         // Taxable income = $20,000 - $12,000 = $8,000 -> tax = $800.
         const result = calculateTaxes(baseCharitableRules, {
             agi: 20000,
             cashGiftsToPublicCharities: 3000,
             otherCharitableContributions: 2100,
-            itemizedOtherDeductions: 7000,
+            otherItemizedExpenses: 7000,
         });
         expect(result.taxableIncome).toBe(8000);
         expect(result.tax).toBe(800);
@@ -833,7 +833,7 @@ describe('calculateTaxes - charitableContributions', () => {
             agi: 40000,
             cashGiftsToPublicCharities: 120,
             otherCharitableContributions: 80,
-            itemizedOtherDeductions: 12000,
+            otherItemizedExpenses: 12000,
         });
         expect(result.taxableIncome).toBe(28000);
         expect(result.outOfScopeForVITA).toBe(false);
@@ -847,7 +847,7 @@ describe('calculateTaxes - charitableContributions', () => {
         const result = calculateTaxes(nonItemizerCharitableRules, {
             agi: 19900,
             cashGiftsToPublicCharities: 1000,
-            itemizedOtherDeductions: 10200,
+            otherItemizedExpenses: 10200,
         });
         expect(result.taxableIncome).toBe(8800);
     });
@@ -860,7 +860,7 @@ describe('calculateTaxes - charitableContributions', () => {
             agi: 25000,
             cashGiftsToPublicCharities: 600,
             otherCharitableContributions: 4000,
-            itemizedOtherDeductions: 3000,
+            otherItemizedExpenses: 3000,
         });
         expect(result.taxableIncome).toBe(14400);
         expect(result.tax).toBe(1440);
@@ -899,13 +899,13 @@ describe('calculateTaxes - charitableContributions', () => {
     it('chooses standard deduction when itemized exceeds standard deduction but loses to standard plus non-itemizer cash deduction', () => {
         // AGI = $20,000 -> 0.5% floor = $100.
         // Cash gifts = $1,000 -> itemized charitable = $1,000 - $100 = $900.
-        // Plus itemizedOtherDeductions = $9,200 -> itemized = $10,100 (> $10,000 standard deduction).
+        // Plus otherItemizedExpenses = $9,200 -> itemized = $10,100 (> $10,000 standard deduction).
         // Standard + non-itemizer cash deduction = $10,000 + $1,000 = $11,000 (beats $10,100 itemized).
         // Taxable income = $20,000 - $11,000 = $9,000 -> tax = $900.
         const result = calculateTaxes(nonItemizerCharitableRules, {
             agi: 20000,
             cashGiftsToPublicCharities: 1000,
-            itemizedOtherDeductions: 9200,
+            otherItemizedExpenses: 9200,
         });
         expect(result.taxableIncome).toBe(9000);
         expect(result.tax).toBe(900);
@@ -915,20 +915,20 @@ describe('calculateTaxes - charitableContributions', () => {
     it('chooses standard plus non-itemizer cash deduction when it beats itemized by $1, and switches at the $1 fencepost', () => {
         // AGI = $20,000 -> 0.5% floor = $100.
         // Cash gifts = $1,000 -> standard + cash = $10,000 + $1,000 = $11,000; itemized charitable = $900.
-        // With itemizedOtherDeductions = $10,099 -> itemized = $10,099 + $900 = $10,999 ($1 below $11,000).
+        // With otherItemizedExpenses = $10,099 -> itemized = $10,099 + $900 = $10,999 ($1 below $11,000).
         const oneDollarBelow = calculateTaxes(nonItemizerCharitableRules, {
             agi: 20000,
             cashGiftsToPublicCharities: 1000,
-            itemizedOtherDeductions: 10099,
+            otherItemizedExpenses: 10099,
         });
         expect(oneDollarBelow.taxableIncome).toBe(9000); // $20,000 - $11,000
         expect(oneDollarBelow.tax).toBe(900);
 
-        // With itemizedOtherDeductions = $10,101 -> itemized = $10,101 + $900 = $11,001 ($1 above $11,000).
+        // With otherItemizedExpenses = $10,101 -> itemized = $10,101 + $900 = $11,001 ($1 above $11,000).
         const oneDollarAbove = calculateTaxes(nonItemizerCharitableRules, {
             agi: 20000,
             cashGiftsToPublicCharities: 1000,
-            itemizedOtherDeductions: 10101,
+            otherItemizedExpenses: 10101,
         });
         expect(oneDollarAbove.taxableIncome).toBe(8999); // $20,000 - $11,001
         expect(oneDollarAbove.tax).toBe(900);
@@ -942,7 +942,7 @@ describe('calculateTaxes - charitableContributions', () => {
             agi: 20000,
             cashGiftsToPublicCharities: 1000,
             otherCharitableContributions: 2000,
-            itemizedOtherDeductions: 5000,
+            otherItemizedExpenses: 5000,
         });
         expect(result.taxableIncome).toBe(10000);
         expect(result.tax).toBe(1000);
@@ -993,7 +993,7 @@ describe('calculateTaxes - charitableContributions', () => {
 
         const result = calculateTaxes(federalAgiRules, {
             agi: 50000,
-            itemizedOtherDeductions: 5000,
+            otherItemizedExpenses: 5000,
         });
         expect(result).not.toHaveProperty('errorCode');
         expect(result.taxableIncome).toBe(45000);
@@ -1028,7 +1028,7 @@ describe('calculateTaxes - charitableContributions', () => {
     });
 });
 
-describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
+describe('calculateTaxes - otherItemizedExpenses in GrossIncome', () => {
     const baseRules: TaxRules = {
         standardDeduction: 10000,
         brackets: [
@@ -1039,7 +1039,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
     };
 
     it('applies standard deduction when itemized deductions are lower', () => {
-        // AGI = $25,000, itemizedOtherDeductions = $7,000 (lower than standardDeduction of $10,000).
+        // AGI = $25,000, otherItemizedExpenses = $7,000 (lower than standardDeduction of $10,000).
         // Effective deduction = max($10,000 standard, $7,000 itemized) = $10,000.
         // Taxable income = $25,000 - $10,000 = $15,000.
         // - First $10,000 @ 10% = $1,000
@@ -1047,7 +1047,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
         // Total Tax = $2,000
         const income: GrossIncome = {
             agi: 25000,
-            itemizedOtherDeductions: 7000,
+            otherItemizedExpenses: 7000,
         };
 
         const result = calculateTaxes(baseRules, income);
@@ -1057,7 +1057,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
     });
 
     it('applies itemized deductions when they exceed the standard deduction', () => {
-        // AGI = $30,000, itemizedOtherDeductions = $14,000 (higher than standardDeduction of $10,000).
+        // AGI = $30,000, otherItemizedExpenses = $14,000 (higher than standardDeduction of $10,000).
         // Effective deduction = max($10,000 standard, $14,000 itemized) = $14,000.
         // Taxable income = $30,000 - $14,000 = $16,000.
         // - First $10,000 @ 10% = $1,000
@@ -1065,7 +1065,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
         // Total Tax = $2,200
         const income: GrossIncome = {
             agi: 30000,
-            itemizedOtherDeductions: 14000,
+            otherItemizedExpenses: 14000,
         };
 
         const result = calculateTaxes(baseRules, income);
@@ -1096,7 +1096,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
             agi: 20000,
             claimedAsDependent: true,
             earnedIncome: 5000,
-            itemizedOtherDeductions: 7000,
+            otherItemizedExpenses: 7000,
         };
 
         const result = calculateTaxes(dependentRules, income);
@@ -1126,7 +1126,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
             agi: 15000,
             claimedAsDependent: true,
             earnedIncome: 2000,
-            itemizedOtherDeductions: 5000,
+            otherItemizedExpenses: 5000,
         };
 
         const result = calculateTaxes(dependentRules, income);
@@ -1156,7 +1156,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
             agi: 15000,
             claimedAsDependent: true,
             earnedIncome: 6000,
-            itemizedOtherDeductions: 4000,
+            otherItemizedExpenses: 4000,
         };
 
         const result = calculateTaxes(dependentRules, income);
@@ -1202,7 +1202,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
         const income: GrossIncome = {
             agi: 50000,
             ltcg: 20000,
-            itemizedOtherDeductions: 15000,
+            otherItemizedExpenses: 15000,
         };
 
         const result = calculateTaxes(stackingRulesWithCapGains, income);
@@ -1220,7 +1220,7 @@ describe('calculateTaxes - itemizedOtherDeductions in GrossIncome', () => {
 
         const result = calculateTaxes(flatTaxRules, {
             agi: 30000,
-            itemizedOtherDeductions: 5000,
+            otherItemizedExpenses: 5000,
         });
         expect(result.taxableIncome).toBe(30000);
         expect(result.tax).toBe(1500);
@@ -1310,7 +1310,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 5000,
             claimedAsDependent: true,
             earnedIncome: 3000,
-            itemizedOtherDeductions: 5000,
+            otherItemizedExpenses: 5000,
             directlyConnectedItemizedDeductions: 0,
         };
 
@@ -1507,7 +1507,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
         //    - Bracket 2 ($24,000 to $91,500 -> $67,500 width) @ 12% = $8,100.00
         //    Total Baseline Parent Tax = $10,500.00. (Remaining capacity in 12% bracket is $4,500, up to the $96,000 threshold).
         //
-        // 2. Child Return & Line 2 Threshold (AGI $15,000 total: $3,000 earned + $12,000 unearned; itemizedOtherDeductions = $5,000):
+        // 2. Child Return & Line 2 Threshold (AGI $15,000 total: $3,000 earned + $12,000 unearned; otherItemizedExpenses = $5,000):
         //    - Itemized deductions ($5,000) exceed dependent SD ($3,600) -> Child Taxable Income = $15,000 - $5,000 = $10,000.
         //    - Line 2 Threshold = max(itemizedBase $1,350 + directlyConnected $2,000, unearnedIncomeThreshold $2,600) = $3,350.
         //    - Net Unearned Income subject to parent rate = $12,000 unearned - $3,350 threshold = $8,650.
@@ -1523,7 +1523,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 15000,
             claimedAsDependent: true,
             earnedIncome: 3000,
-            itemizedOtherDeductions: 5000,
+            otherItemizedExpenses: 5000,
             directlyConnectedItemizedDeductions: 2000,
             parent: {
                 income: {
@@ -1540,7 +1540,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
     });
 
     it('keeps the Kiddie Tax unearned threshold floor when itemizing with zero directly connected deductions', () => {
-        // Child AGI = $15,000 ($3,000 earned + $12,000 unearned), itemizedOtherDeductions = $5,000,
+        // Child AGI = $15,000 ($3,000 earned + $12,000 unearned), otherItemizedExpenses = $5,000,
         // directlyConnectedItemizedDeductions omitted / 0.
         // Child Taxable Income = $15,000 - $5,000 = $10,000.
         // Line 2 threshold = max(itemizedBase $1,350 + $0, unearnedIncomeThreshold $2,600) = $2,600.
@@ -1554,7 +1554,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 15000,
             claimedAsDependent: true,
             earnedIncome: 3000,
-            itemizedOtherDeductions: 5000,
+            otherItemizedExpenses: 5000,
             parent: {
                 income: {
                     taxableIncome: 90000,
@@ -1579,7 +1579,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 10000,
             claimedAsDependent: true,
             earnedIncome: 0,
-            itemizedOtherDeductions: 10000,
+            otherItemizedExpenses: 10000,
             parent: {
                 income: {
                     taxableIncome: 100000,
@@ -1612,7 +1612,7 @@ describe('calculateTaxes - Form 8615 (Kiddie Tax)', () => {
             agi: 8000,
             claimedAsDependent: true,
             earnedIncome: 3000,
-            itemizedOtherDeductions: 3650,
+            otherItemizedExpenses: 3650,
             directlyConnectedItemizedDeductions: 3650,
             parent: {
                 income: {
