@@ -402,7 +402,7 @@ describe("StudentSection", () => {
         expect(latestCosts!.at(-1)?.qualifiedExpenses).toBe(250);
     });
 
-    it("passes medicalExpenses and salt into tax calculations when itemizing", () => {
+    it("passes medicalExpenses, salt, and otherItemizedExpenses into tax calculations when itemizing", () => {
         const onExpenseCostsChange = vi.fn();
 
         render(
@@ -431,10 +431,11 @@ describe("StudentSection", () => {
             | undefined;
         expect(baselineNoItemized).toBeDefined();
 
-        // Add pre-floor medical expenses (7.5% of $20,000 = $1,500 floor; $3,500 -> $2,000 deduction)
-        // and SALT ($2,000), lowering tax below the no-itemized baseline.
+        // Add pre-floor medical expenses (7.5% of $20,000 = $1,500 floor; $3,500 -> $2,000 deduction),
+        // SALT ($2,000), and interest/casualty/other itemized expenses ($1,500), lowering tax below baseline.
         fireEvent.change(screen.getByLabelText(testT("medicalExpensesLabel")), {target: {value: "3500"}});
         fireEvent.change(screen.getByLabelText(testT("saltLabel")), {target: {value: "2000"}});
+        fireEvent.change(screen.getByLabelText(testT("otherItemizedExpensesLabel")), {target: {value: "1500"}});
 
         const withItemized = onExpenseCostsChange.mock.calls.at(-1)?.[0] as
             | Array<{ qualifiedExpenses: number; cost: number }>
@@ -503,6 +504,11 @@ const NUMERIC_LINE_FIELDS: readonly NumericLineFieldSpec[] = [
         lineKey: "salt",
         pigLatinLabel: "Atestay andyay ocallay axestay",
         pigLatinTooltip: "Eduleschay A inelay 5d",
+    },
+    {
+        lineKey: "otherItemizedExpenses",
+        pigLatinLabel: "Interestyay, asualtycay osseslay, andyay otheryay itemizedyay eductionsday",
+        pigLatinTooltip: "Eduleschay A inelay 10 + Eduleschay A inelay 15 + Eduleschay A inelay 16",
     },
 ];
 

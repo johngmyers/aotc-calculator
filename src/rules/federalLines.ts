@@ -2,45 +2,71 @@ import {FederalTaxYear} from "./federal.js";
 
 export type FederalLineKind = "form" | "schedule";
 
-export interface FormLineRef {
+export type FormLineRef = {
     kind: FederalLineKind
     form: string
     line: string
 }
 
-export interface FederalLineRevision {
-    agi: readonly FormLineRef[]
-    ltcg: readonly FormLineRef[]
-    medicalExpenses: readonly FormLineRef[]
-    salt: readonly FormLineRef[]
-    taxBeforeNonrefundableCredits: readonly FormLineRef[]
-    nonrefundableCredits: readonly FormLineRef[]
+export type FormLineRefs = {
+    additive?: boolean
+    refs: readonly FormLineRef[]
+}
+
+export type FederalLineRevision = {
+    agi: FormLineRefs
+    ltcg: FormLineRefs
+    medicalExpenses: FormLineRefs
+    salt: FormLineRefs
+    otherItemizedExpenses: FormLineRefs
+    taxBeforeNonrefundableCredits: FormLineRefs
+    nonrefundableCredits: FormLineRefs
 }
 
 export const FEDERAL_LINE_REVISIONS: Record<number, FederalLineRevision> = {
     2026: {
-        agi: [
-            {kind: "form", form: "1040", line: "11"},
-            {kind: "form", form: "1040-SR", line: "11"},
-        ],
-        ltcg: [
-            {kind: "form", form: "1040", line: "7a"},
-            {kind: "form", form: "1040-SR", line: "7a"},
-        ],
-        medicalExpenses: [
-            {kind: "schedule", form: "A", line: "1"},
-        ],
-        salt: [
-            {kind: "schedule", form: "A", line: "5d"},
-        ],
-        taxBeforeNonrefundableCredits: [
-            {kind: "form", form: "1040", line: "18"},
-            {kind: "form", form: "1040-SR", line: "18"},
-        ],
-        nonrefundableCredits: [
-            {kind: "form", form: "1040", line: "21"},
-            {kind: "form", form: "1040-SR", line: "21"},
-        ],
+        agi: {
+            refs: [
+                {kind: "form", form: "1040", line: "11"},
+                {kind: "form", form: "1040-SR", line: "11"},
+            ],
+        },
+        ltcg: {
+            refs: [
+                {kind: "form", form: "1040", line: "7a"},
+                {kind: "form", form: "1040-SR", line: "7a"},
+            ],
+        },
+        medicalExpenses: {
+            refs: [
+                {kind: "schedule", form: "A", line: "1"},
+            ],
+        },
+        salt: {
+            refs: [
+                {kind: "schedule", form: "A", line: "5d"},
+            ],
+        },
+        otherItemizedExpenses: {
+            additive: true,
+            refs: [
+                {kind: "schedule", form: "A", line: "10"},
+                {kind: "schedule", form: "A", line: "15"},
+                {kind: "schedule", form: "A", line: "16"},
+            ],
+        },
+        taxBeforeNonrefundableCredits: {
+            refs: [
+                {kind: "form", form: "1040", line: "18"},
+                {kind: "form", form: "1040-SR", line: "18"},
+            ],
+        },
+        nonrefundableCredits: {
+            refs: [
+                {kind: "form", form: "1040", line: "21"},
+                {kind: "form", form: "1040-SR", line: "21"},
+            ],
+        },
     },
     // Example if AGI moves to a schedule in a later revision:
     // 2027: {

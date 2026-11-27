@@ -114,6 +114,8 @@ export function StudentSection({
     const [medicalExpenses, setMedicalExpenses] = useState<number | undefined>(undefined);
     const saltId = useId();
     const [salt, setSalt] = useState<number | undefined>(undefined);
+    const otherItemizedExpensesId = useId();
+    const [otherItemizedExpenses, setOtherItemizedExpenses] = useState<number | undefined>(undefined);
 
     useEffect(() => {
         onNameChange(getEffectiveStudentName(rawName, studentNumber, t));
@@ -133,9 +135,10 @@ export function StudentSection({
                 earnedIncome: earnedIncome,
                 cashGiftsToPublicCharities: cashGiftsToPublicCharities,
                 otherCharitableContributions: otherCharitableContributions,
+                mustItemize: filingStatus === "mfs" && spouseItemizesDeductions,
                 medicalExpenses: medicalExpenses,
                 salt: salt,
-                mustItemize: filingStatus === "mfs" && spouseItemizesDeductions,
+                otherItemizedExpenses: otherItemizedExpenses,
                 taxableScholarships: minTaxableScholarships ?? 0,
             }
             return computeStudentExpenseCosts({
@@ -167,6 +170,7 @@ export function StudentSection({
         otherCharitableContributions,
         medicalExpenses,
         salt,
+        otherItemizedExpenses,
         onExpenseCostsChange,
     ]);
 
@@ -336,6 +340,20 @@ export function StudentSection({
                 <HelpTooltip
                     t={t}
                     lineRefs={federalLineRevision.salt}
+                />
+            </div>,
+            <div key="other-itemized-expenses">
+                <label htmlFor={otherItemizedExpensesId}>{t("otherItemizedExpensesLabel")}</label>
+                {" "}
+                <IntegerInput
+                    id={otherItemizedExpensesId}
+                    value={otherItemizedExpenses}
+                    onValueChange={setOtherItemizedExpenses}
+                />
+                {" "}
+                <HelpTooltip
+                    t={t}
+                    lineRefs={federalLineRevision.otherItemizedExpenses}
                 />
             </div>,
         ],

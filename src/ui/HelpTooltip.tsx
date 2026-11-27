@@ -1,5 +1,5 @@
 import {useId, useState} from "react";
-import {type FormLineRef} from "../rules/federalLines.js";
+import {FormLineRefs} from "../rules/federalLines.js";
 import {type MessageKey, type Translator} from "./i18n.js";
 
 export type HelpTooltipProps =
@@ -11,15 +11,15 @@ export type HelpTooltipProps =
 }
     | {
     t: Translator;
-    lineRefs: readonly FormLineRef[];
+    lineRefs: FormLineRefs;
     textKey?: never;
     vars?: never;
 };
 
 function resolveTooltipText(t: Translator, props: HelpTooltipProps): string {
     if (props.lineRefs !== undefined) {
-        const separator = t("federalLineListSeparator");
-        return props.lineRefs.map((lineRef) => {
+        const separator = props.lineRefs.additive ? t("federalLineAdditiveSeparator") : t("federalLineListSeparator");
+        return props.lineRefs.refs.map((lineRef) => {
             const kindKey =
                 lineRef.kind === "form"
                     ? "federalLineKindForm"

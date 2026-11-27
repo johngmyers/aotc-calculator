@@ -47,6 +47,7 @@ earnedMoreThanHalfSupportLabel: Earned income was more than half of their own su
 federalLineKindForm: Form
 federalLineKindSchedule: Schedule
 federalLineListSeparator: ", "
+federalLineAdditiveSeparator: " + "
 federalLineReference: "{refKind} {refForm} line {refLine}"
 agiLabel: AGI
 earnedIncomeLabel: "Earned income (excluding scholarships not reported on W-2)"
@@ -75,7 +76,7 @@ cashGiftsToPublicCharitiesLabel: Cash gifts to public charities
 otherCharitableContributionsLabel: Other charitable contributions
 medicalExpensesLabel: Medical and dental expenses
 saltLabel: State and local taxes
-otherItemizedLabel: Interest, casualty losses, and other itemized deductions
+otherItemizedExpensesLabel: Interest, casualty losses, and other itemized deductions
 chartCostLabel: "Student's tax"
 chartCreditLabel: AOTC
 chartXAxisLabel: "Student's qualified expenses"
