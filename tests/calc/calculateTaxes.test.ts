@@ -65,6 +65,8 @@ describe('calculateTaxes - brackets', () => {
 describe('calculateTaxes - standardDeduction', () => {
     const rulesWithDeduction: TaxRules = {
         standardDeduction: 16100, // 2026 Single basic standard deduction
+        standardDeductionBlindAddon: 2050,
+        standardDeductionSeniorAddon: 1200,
         brackets: [
             {until: 10000, rate: 0.10},
             {until: 40000, rate: 0.12},
@@ -145,6 +147,41 @@ describe('calculateTaxes - standardDeduction', () => {
         expect(result.outOfScopeForVITA).toBe(false);
     });
 
+    it('adds distinct blindCount and seniorCount add-ons independently and stacks them', () => {
+        // Blind only: SD = 16,100 + 2,050 = 18,150 -> AGI 20,000 - 18,150 = 1,850 taxable (tax = 185)
+        const blindOnly = calculateTaxes(rulesWithDeduction, {agi: 20000, blindCount: 1});
+        expect(blindOnly.taxableIncome).toBe(1850);
+        expect(blindOnly.tax).toBe(185);
+
+        // Senior only: SD = 16,100 + 1,200 = 17,300 -> AGI 20,000 - 17,300 = 2,700 taxable (tax = 270)
+        const seniorOnly = calculateTaxes(rulesWithDeduction, {agi: 20000, seniorCount: 1});
+        expect(seniorOnly.taxableIncome).toBe(2700);
+        expect(seniorOnly.tax).toBe(270);
+
+        // Both blind (1) and senior (1): SD = 16,100 + 2,050 + 1,200 = 19,350 -> AGI 22,000 - 19,350 = 2,650 taxable (tax = 265)
+        const both = calculateTaxes(rulesWithDeduction, {agi: 22000, blindCount: 1, seniorCount: 1});
+        expect(both.taxableIncome).toBe(2650);
+        expect(both.tax).toBe(265);
+    });
+
+    it('supports blindCount of 2 and seniorCount of 2 on joint rules', () => {
+        const jointAddonRules: TaxRules = {
+            standardDeduction: 32200,
+            standardDeductionBlindAddon: 1650,
+            standardDeductionSeniorAddon: 1400,
+            brackets: [{until: Infinity, rate: 0.10}],
+        };
+
+        // SD = 32,200 + (2 * 1,650) + (2 * 1,400) = 38,300 -> AGI 40,000 - 38,300 = 1,700 taxable (tax = 170)
+        const result = calculateTaxes(jointAddonRules, {
+            agi: 40000,
+            blindCount: 2,
+            seniorCount: 2,
+        });
+        expect(result.taxableIncome).toBe(1700);
+        expect(result.tax).toBe(170);
+    });
+
     it('disallows the standard deduction when mustItemize is true', () => {
         // AGI = $21,100
         // With mustItemize: standard deduction is treated as 0, so taxableIncome = $21,100
@@ -153,6 +190,8 @@ describe('calculateTaxes - standardDeduction', () => {
         // Total Tax = $2,332
         const mustItemizeResult = calculateTaxes(rulesWithDeduction, {
             agi: 21100,
+            blindCount: 1,
+            seniorCount: 1,
             mustItemize: true,
         });
         expect(mustItemizeResult.taxableIncome).toBe(21100);
@@ -165,6 +204,8 @@ describe('calculateTaxes - Dependent Standard Deduction Rules', () => {
     // Dependent student rules: basic cap = $16,100, base = $1,350, earnedAddOn = $450
     const dependentRules: TaxRules = {
         standardDeduction: 16100, // Acts as the maximum cap for a dependent
+        standardDeductionBlindAddon: 2050,
+        standardDeductionSeniorAddon: 1200,
         dependentStandardDeduction: {
             base: 1350,
             earnedAddOn: 450,
@@ -247,11 +288,64 @@ describe('calculateTaxes - Dependent Standard Deduction Rules', () => {
         expect(result.outOfScopeForVITA).toBe(false);
     });
 
+    it('adds distinct blindCount and seniorCount add-ons independently on top of dependent standard deduction', () => {
+        // Base dependent SD = max(1350, 2000 + 450) = 2,450; blind add-on = +2,050 -> total SD = 4,500
+        // AGI = 10,000 -> taxableIncome = 5,500 -> 5,500 * 0.10 = 550
+        const blindOnly = calculateTaxes(dependentRules, {
+            agi: 10000,
+            claimedAsDependent: true,
+            earnedIncome: 2000,
+            blindCount: 1,
+        });
+        expect(blindOnly.taxableIncome).toBe(5500);
+        expect(blindOnly.tax).toBe(550);
+
+        // Base dependent SD = 2,450; senior add-on = +1,200 -> total SD = 3,650
+        // AGI = 10,000 -> taxableIncome = 6,350 -> 6,350 * 0.10 = 635
+        const seniorOnly = calculateTaxes(dependentRules, {
+            agi: 10000,
+            claimedAsDependent: true,
+            earnedIncome: 2000,
+            seniorCount: 1,
+        });
+        expect(seniorOnly.taxableIncome).toBe(6350);
+        expect(seniorOnly.tax).toBe(635);
+
+        // Stacked: 2,450 + 2,050 + 1,200 = 5,700
+        // AGI = 10,000 -> taxableIncome = 4,300 -> 4,300 * 0.10 = 430
+        const both = calculateTaxes(dependentRules, {
+            agi: 10000,
+            claimedAsDependent: true,
+            earnedIncome: 2000,
+            blindCount: 1,
+            seniorCount: 1,
+        });
+        expect(both.taxableIncome).toBe(4300);
+        expect(both.tax).toBe(430);
+    });
+
+    it('adds blind and senior add-ons after capping the dependent base deduction at basic standardDeduction', () => {
+        // Uncapped earned + add-on = 18,000 + 450 = 18,450 -> capped at basic SD 16,100
+        // Plus blind (2,050) + senior (1,200) -> total SD = 19,350
+        // AGI = 25,000 -> taxableIncome = 5,650 -> 5,650 * 0.10 = 565
+        const result = calculateTaxes(dependentRules, {
+            agi: 25000,
+            claimedAsDependent: true,
+            earnedIncome: 18000,
+            blindCount: 1,
+            seniorCount: 1,
+        });
+        expect(result.taxableIncome).toBe(5650);
+        expect(result.tax).toBe(565);
+    });
+
     it('disallows the standard deduction for a dependent when mustItemize is true', () => {
         const inputs: GrossIncome = {
             agi: 5000,
             claimedAsDependent: true,
             earnedIncome: 2000,
+            blindCount: 1,
+            seniorCount: 1,
             mustItemize: true, // Forces dependent standard deduction to $0
         };
         // Since mustItemize is true, dependent SD rules are bypassed and standard deduction = $0.
@@ -1733,12 +1827,16 @@ describe('Personal Exemptions and Credits', () => {
         const gross: GrossIncome = {
             agi: 25000,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
+        // Gross exemption = 3007 + (3 * 1009) + ((1 + 2 + 2) * 503) = 3007 + 3027 + 2515 = 8549
+        // Taxable income = 25000 - 1000 - 8549 = 15451 -> tax = 15451 * 0.05 = 772.55 -> 773
         const result = calculateTaxes(deductionRules, gross);
-        expect(result.taxableIncome).toBe(16960);
-        expect(result.tax).toBe(848);
+        expect(result.taxableIncome).toBe(15451);
+        expect(result.tax).toBe(773);
     });
 
     it('wipes out personal exemptions for claimed dependents', () => {
@@ -1747,7 +1845,9 @@ describe('Personal Exemptions and Credits', () => {
             claimedAsDependent: true,
             earnedIncome: 5000,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
         const result = calculateTaxes(deductionRules, gross);
@@ -1759,9 +1859,12 @@ describe('Personal Exemptions and Credits', () => {
         const gross: GrossIncome = {
             agi: 15000,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
+        // Credit = 307 + (3 * 103) + (5 * 53) = 881; taxable income = 10000; tax = 500 - 881 -> 0
         const result = calculateTaxes(creditRules, gross);
         expect(result.taxableIncome).toBe(10000);
         expect(result.tax).toBe(0);
@@ -1782,7 +1885,9 @@ describe('Personal Exemptions and Credits', () => {
         const gross: GrossIncome = {
             agi: 2000, // Taxable income is 1000, tentative tax at 5% is 50
             dependentCount: 1,
-            seniorOrBlindCount: 1,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
         const result = calculateTaxes(lowTaxCreditRules, gross);
@@ -1794,66 +1899,100 @@ describe('Personal Exemptions and Credits', () => {
         const gross: GrossIncome = {
             agi: 46000,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
+        // Gross = 8549; 3 increments -> reduction = round(3 * 0.02 * 8549) = round(512.94) = 513 -> net = 8036
+        // Taxable income = 46000 - 2000 - 8036 = 35964
         const result = calculateTaxes(phaseoutOnlyRules, gross);
-        expect(result.taxableIncome).toBe(37382);
+        expect(result.taxableIncome).toBe(35964);
     });
 
     it('ensures exemption phaseout at exact threshold does not trigger reduction', () => {
         const gross: GrossIncome = {
             agi: 40000,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
         const result = calculateTaxes(phaseoutOnlyRules, gross);
-        expect(result.taxableIncome).toBe(30960);
+        expect(result.taxableIncome).toBe(29451);
     });
 
     it('triggers first increment of exemption phaseout one dollar over threshold', () => {
         const gross: GrossIncome = {
             agi: 40001,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
+        // 1 increment -> reduction = round(0.02 * 8549) = round(170.98) = 171 -> net = 8378
+        // Taxable income = 40001 - 2000 - 8378 = 29623
         const result = calculateTaxes(phaseoutOnlyRules, gross);
-        expect(result.taxableIncome).toBe(31102);
+        expect(result.taxableIncome).toBe(29623);
     });
 
     it('doesn\'t phaseout second increment at boundary', () => {
         const gross: GrossIncome = {
             agi: 45000,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
+        // 2 increments -> reduction = round(2 * 0.02 * 8549) = round(341.96) = 342 -> net = 8207
+        // Taxable income = 45000 - 2000 - 8207 = 34793
         const result = calculateTaxes(phaseoutOnlyRules, gross);
-        expect(result.taxableIncome).toBe(36242);
+        expect(result.taxableIncome).toBe(34793);
     });
 
-    it('triggers first increment of exemption phaseout one dollar over threshold', () => {
+    it('triggers third increment of exemption phaseout one dollar over second boundary', () => {
         const gross: GrossIncome = {
             agi: 45001,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
+        // 3 increments -> reduction = round(3 * 0.02 * 8549) = 513 -> net = 8036
+        // Taxable income = 45001 - 2000 - 8036 = 34965
         const result = calculateTaxes(phaseoutOnlyRules, gross);
-        expect(result.taxableIncome).toBe(36383);
+        expect(result.taxableIncome).toBe(34965);
     });
 
     it('caps phaseout reduction at zero when AGI is extremely high', () => {
         const gross: GrossIncome = {
             agi: 500000,
             dependentCount: 3,
-            seniorOrBlindCount: 2,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 2,
         };
 
         const result = calculateTaxes(phaseoutOnlyRules, gross);
         expect(result.taxableIncome).toBe(498000);
+    });
+
+    it('combines blindCount, seniorCount, and dependentSeniorOrBlindCount in exemptions', () => {
+        const gross: GrossIncome = {
+            agi: 25000,
+            blindCount: 1,
+            seniorCount: 2,
+            dependentSeniorOrBlindCount: 1,
+        };
+
+        // Gross exemption = 3007 + ((1 + 2 + 1) * 503) = 3007 + 2012 = 5019
+        // Taxable income = 25000 - 1000 - 5019 = 18981
+        const result = calculateTaxes(deductionRules, gross);
+        expect(result.taxableIncome).toBe(18981);
     });
 
     it('calculates exemption phaseout using federalAgi when provided', () => {

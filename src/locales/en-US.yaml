@@ -5,6 +5,7 @@ calculatorSettingsSectionLabel: Calculator settings
 scopeExclusionsBlurb: |-
   <p>The following are out of scope for the calculator, if on a <b>student</b> return:</p>
   <ul>
+    <li>65 or older at end of tax year</li>
     <li>Qualified Business Income (QBI) deduction is reduced by taxable income being either very low or above the high-income threshold</li>
     <li>Alternative Minimum Tax (AMT) owed</li>
     <li>Charitable contribution carryforwards</li>
@@ -18,7 +19,6 @@ scopeExclusionsBlurb: |-
     <li>SALT cap reduced due to high AGI</li>
     <li>Traditional IRA contribution deduction reduced due to high AGI</li>
     <li>Net Investment Income Tax (NIIT)</li>
-    <li>Earned Income Tax Credit (EITC) (due to having a qualifying child)</li>
     <li>Receives taxable distributions from a Qualified Disability Trust and is subject to Form 8615 (Kiddie Tax)</li>
   </ul>
 stayWithinVitaScopeLabel: Stay within scope for VITA/TCE

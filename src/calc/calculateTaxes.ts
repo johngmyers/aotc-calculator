@@ -28,6 +28,8 @@ export interface TaxRules {
     brackets: TaxBrackets
     capitalGainsBrackets?: TaxBrackets
     standardDeduction?: number
+    standardDeductionBlindAddon?: number
+    standardDeductionSeniorAddon?: number
     dependentStandardDeduction?: {
         base: number
         earnedAddOn: number
@@ -58,8 +60,10 @@ export interface GrossIncome {
     federalAgi?: number // For states that use federal AGI for phaseouts.
 
     // Exemptions
+    blindCount?: 0 | 1 | 2
+    seniorCount?: 0 | 1 | 2
     dependentCount?: number
-    seniorOrBlindCount?: number
+    dependentSeniorOrBlindCount?: number
 
     cashGiftsToPublicCharities?: number
     otherCharitableContributions?: number
@@ -129,6 +133,9 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
 
         standardDeduction = Math.min(standardDeduction, dependentStandardDeduction);
     }
+    standardDeduction +=
+        ((grossIncome.blindCount ?? 0) * (rules.standardDeductionBlindAddon ?? 0)) +
+        ((grossIncome.seniorCount ?? 0) * (rules.standardDeductionSeniorAddon ?? 0));
 
     // Below-the-line, non-itemizer cash contributions deduction
     standardDeduction += Math.min(grossIncome.cashGiftsToPublicCharities ?? 0, rules.nonItemizerCashCharitableDeductionCap ?? 0);
@@ -186,7 +193,9 @@ export function calculateTaxes(rules: TaxRules, grossIncome: GrossIncome): TaxCa
 
         const grossAmount = rules.exemption.taxpayerAmount +
             (grossIncome.dependentCount ?? 0) * rules.exemption.dependentAmount +
-            (grossIncome.seniorOrBlindCount ?? 0) * rules.exemption.seniorOrBlindAmount;
+            (grossIncome.blindCount ?? 0) * rules.exemption.seniorOrBlindAmount +
+            (grossIncome.seniorCount ?? 0) * rules.exemption.seniorOrBlindAmount +
+            (grossIncome.dependentSeniorOrBlindCount ?? 0) * rules.exemption.seniorOrBlindAmount;
 
         if (!rules.exemption.phaseout) return grossAmount;
 

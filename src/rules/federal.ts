@@ -100,6 +100,17 @@ const STANDARD_DEDUCTION_2026: Record<FilingStatus, number> = {
     hoh: 24150,
 } as const;
 
+const STANDARD_DEDUCTION_ADDON_2026_SINGLE = 2050;
+const STANDARD_DEDUCTION_ADDON_2026_MARRIED = 1650;
+
+const STANDARD_DEDUCTION_ADDON_2026: Record<FilingStatus, number> = {
+    single: STANDARD_DEDUCTION_ADDON_2026_SINGLE,
+    hoh: STANDARD_DEDUCTION_ADDON_2026_SINGLE,
+    mfj: STANDARD_DEDUCTION_ADDON_2026_MARRIED,
+    mfs: STANDARD_DEDUCTION_ADDON_2026_MARRIED,
+    qss: STANDARD_DEDUCTION_ADDON_2026_MARRIED,
+} as const;
+
 // 2026 Long-Term Capital Gains Brackets (IRC § 1(h) / § 1(j)(5))
 const LTCG_BRACKETS_2026_SINGLE: TaxBrackets = [
     { rate: 0.00, until: 49450 },
@@ -193,6 +204,17 @@ const STANDARD_DEDUCTION_2027: Record<FilingStatus, number> = {
     hoh: 24925,
 } as const;
 
+const STANDARD_DEDUCTION_ADDON_2027_SINGLE = 2100;
+const STANDARD_DEDUCTION_ADDON_2027_MARRIED = 1700;
+
+const STANDARD_DEDUCTION_ADDON_2027: Record<FilingStatus, number> = {
+    single: STANDARD_DEDUCTION_ADDON_2027_SINGLE,
+    hoh: STANDARD_DEDUCTION_ADDON_2027_SINGLE,
+    mfj: STANDARD_DEDUCTION_ADDON_2027_MARRIED,
+    mfs: STANDARD_DEDUCTION_ADDON_2027_MARRIED,
+    qss: STANDARD_DEDUCTION_ADDON_2027_MARRIED,
+} as const;
+
 // 2027 Long-Term Capital Gains Brackets (Rev. Proc. 2026-35 § 3.03)
 const LTCG_BRACKETS_2027_SINGLE: TaxBrackets = [
     { rate: 0.00, until: 51050 },
@@ -237,6 +259,8 @@ const NON_ITEMIZER_CASH_CHARITABLE_CAP_BY_STATUS_2026: Record<FilingStatus, numb
 interface YearSharedConfig {
     aotcByStatus: Partial<Record<FilingStatus, AotcRules>>;
     capitalGainsBracketsByStatus: Record<FilingStatus, TaxBrackets>;
+    standardDeductionBlindAddonByStatus: Record<FilingStatus, number>;
+    standardDeductionSeniorAddonByStatus: Record<FilingStatus, number>;
     dependentStandardDeduction: NonNullable<TaxRules["dependentStandardDeduction"]>;
     kiddieTax: NonNullable<TaxRules["kiddieTax"]>;
     medicalDeductionThresholdRate: number;
@@ -250,6 +274,8 @@ const YEAR_SHARED_CONFIG: Record<FederalTaxYear, YearSharedConfig> = {
     2026: {
         aotcByStatus: AOTC_RULES_BY_STATUS_2009,
         capitalGainsBracketsByStatus: LTCG_BRACKETS_2026,
+        standardDeductionBlindAddonByStatus: STANDARD_DEDUCTION_ADDON_2026,
+        standardDeductionSeniorAddonByStatus: STANDARD_DEDUCTION_ADDON_2026,
         dependentStandardDeduction: { base: 1350, earnedAddOn: 450 },
         kiddieTax: { unearnedIncomeThreshold: 2700, itemizedBase: 1350 },
         medicalDeductionThresholdRate: 0.075,
@@ -260,6 +286,8 @@ const YEAR_SHARED_CONFIG: Record<FederalTaxYear, YearSharedConfig> = {
     2027: {
         aotcByStatus: AOTC_RULES_BY_STATUS_2009,
         capitalGainsBracketsByStatus: LTCG_BRACKETS_2027,
+        standardDeductionBlindAddonByStatus: STANDARD_DEDUCTION_ADDON_2027,
+        standardDeductionSeniorAddonByStatus: STANDARD_DEDUCTION_ADDON_2027,
         dependentStandardDeduction: { base: 1400, earnedAddOn: 500 },
         kiddieTax: { unearnedIncomeThreshold: 2800, itemizedBase: 1400 },
         medicalDeductionThresholdRate: 0.075,
@@ -282,6 +310,8 @@ function buildYearRules(
             brackets: bracketsByStatus[status],
             capitalGainsBrackets: shared.capitalGainsBracketsByStatus[status],
             standardDeduction: standardDeductionByStatus[status],
+            standardDeductionBlindAddon: shared.standardDeductionBlindAddonByStatus[status],
+            standardDeductionSeniorAddon: shared.standardDeductionSeniorAddonByStatus[status],
             dependentStandardDeduction: shared.dependentStandardDeduction,
             kiddieTax: shared.kiddieTax,
             medicalDeductionThresholdRate: shared.medicalDeductionThresholdRate,
